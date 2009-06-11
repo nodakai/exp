@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ $# -lt 1 -o ! -f $1 ]; then
+if [ $# -lt 1 -o ! -f "$1" ]; then
     echo "usage: ${0##*/} <filename>  (note: the filename must contain the problem id)"
     exit 1
 fi
