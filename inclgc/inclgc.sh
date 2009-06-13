@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 CPP=${INCLGC_CPP:=cpp}
 CPPFLAGS=${INCLGC_CPPFLAGS:=-w -x c++}
@@ -7,7 +7,7 @@ EXTS=${INCLGC_EXTS:=h hpp hxx}
 MYNAME=${0%%*/}
 
 function printUsage {
-    echo "usage: $MYNAME <path-to-dir>"
+    echo "usage: $MYNAME <path>"
 }
 
 function process {
@@ -27,13 +27,13 @@ function process {
 }
 
 function processFile {
-    hfile="$1"
-    pdir="${hfile%/*}"
+    hfile=$1
+    pdir=${hfile%/*}
     process "$hfile" "$pdir"
 }
 
 function processDir {
-    pdir="$1"
+    pdir=$1
     pattern='-name *.'`echo $EXTS|sed -e 's/ \+/ -o -name *./g'`
     find "$pdir" $pattern \
     | while read hfile; do
