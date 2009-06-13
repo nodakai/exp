@@ -2,59 +2,57 @@
 
 CPP=${INCLGC_CPP:=cpp}
 CPPFLAGS=${INCLGC_CPPFLAGS:=-w -x c++}
+EXTS=${INCLGC_EXTS:=h hpp hxx}
+
+MYNAME=${0%%*/}
 
 function printUsage {
-    echo "usage: ${0%%*/} <path-to-dir>"
+    echo "usage: $MYNAME <path-to-dir>"
 }
 
-function processFile {
-    hfile=$1
-    basename=${hfile##*/}
-    dir="${hfile%/*}"
-    includes=`find "$dir" -name '.*' -prune -o -type d -name include -printf ' -I%p'`
-    wc1="`echo -e '#include <'$basename'>\n' |
-            $CPP $CPPFLAGS -I$dir $includes 2>/dev/null | wc -l`"
-    wc2="`echo -e '#include <'$basename'>\n#include <'$basename'>\n' |
-            $CPP $CPPFLAGS -I$dir $includes 2>/dev/null | wc -l`"
+function process {
+    hfileFull=$1
+    pdir=$2
+    hfile=${hfileFull##*/}
+    dir=${hfileFull%/*}
+
+    includes=-I$dir `find "$pdir" -name '.*' -prune -o -type d -name include -printf ' -I%p'`
+    wc1=`echo -e "#include <$hfile>" | \
+            $CPP $CPPFLAGS $includes 2>/dev/null | wc -l`
+    wc2=`echo -e "#include <$hfile>\\n#include <$hfile>" | \
+            $CPP $CPPFLAGS $includes 2>/dev/null | wc -l`
     if (( wc1 * 5 < wc2 * 3 )); then
-        echo "$hfile: suspected lack of include guard (once=$wc1 vs. twice=$wc2)"
+        echo "$hfileFull: suspected lack of include guard (once=$wc1 vs. twice=$wc2)"
     fi
 }
 
+function processFile {
+    hfile="$1"
+    pdir="${hfile%/*}"
+    process "$hfile" "$pdir"
+}
+
 function processDir {
-    dir="$1"
-    includes=`find "$dir" -name '.*' -prune -o -type d -name include -printf ' -I%p'`
-#    echo $includes
-    find "$dir" -name '*.h' -o -name '*.hpp' -o -name '*.hxx' \
+    pdir="$1"
+    pattern='-name *.'`echo $EXTS|sed -e 's/ \+/ -o -name *./g'`
+    find "$pdir" $pattern \
     | while read hfile; do
-        #echo -I${hfile%/*} $includes
-        basename=${hfile##*/}
-        fdir=${hfile%/*}
-        wc1="`echo -e '#include <'$basename'>\n' |
-                $CPP $CPPFLAGS -I$fdir $includes 2>/dev/null | wc -l`"
-        wc2="`echo -e '#include <'$basename'>\n#include <'$basename'>\n' |
-                $CPP $CPPFLAGS -I$fdir $includes 2>/dev/null | wc -l`"
-        if (( wc1 * 5 < wc2 * 3 )); then
-            echo "$hfile: suspected lack of include guard (once=$wc1 vs. twice=$wc2)"
-        fi
+        process "$pdir" "$hfile"
     done
 }
 
-function main {
-    for a in "$@"; do
-        if [ -f $a ]; then
-            processFile "$a"
-        elif [ -d $a ]; then
-            processDir "$a"
-        else
-            echo $'Ayanami: "I\'m sorry. I don\'t know what to feel at times like' "$a" '..."'
-        fi
-    done
-}
 
 if [ $# -lt 1 ]; then
     printUsage
     exit 1
 fi
 
-main "$@"
+for a in "$@"; do
+    if [ -f "$a" ]; then
+        processFile "$a"
+    elif [ -d "$a" ]; then
+        processDir "$a"
+    else
+        echo "Ayanami: \"I'm sorry. I don't know what to feel at times like $a ...\""
+    fi
+done
