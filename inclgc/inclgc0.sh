@@ -1,13 +1,15 @@
 #! /bin/bash
 
-CPP=${INCLGC_CPP:=cpp}
-CPPFLAGS=${INCLGC_CPPFLAGS:=-w -x c++}
-EXTS=${INCLGC_EXTS:=h hpp hxx}
+CPP=${INCLGC_CPP:-cpp}
+CPPFLAGS=${INCLGC_CPPFLAGS:--w -x c++}
+EXTS=${INCLGC_EXTS:-h hpp hxx}
 
-MYNAME=${0%%*/}
+MYNAME=${0##*/}
 
 function printUsage {
-    echo "usage: $MYNAME <path>"
+    cat<<EOS
+usage: $MYNAME <path>
+EOS
 }
 
 function process {
