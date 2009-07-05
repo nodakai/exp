@@ -1,124 +1,16 @@
 #include <spu_intrinsics.h>
 #include <iostream>
+#include "vect.h"
 
 using namespace std;
-
-template <typename S, unsigned N>
-class Vect;
-
-template <typename S, unsigned N>
-const Vect<S,N> & operator^=(S &f, const Vect<S,N> &vf)
-{
-    f = vf.f_;
-    *(&f+1) ^= vf.r_;
-    return vf;
-}
-
-template <typename S>
-const Vect<S,0> & operator^=(S &f, const Vect<S,0> &vf)
-{
-    return vf;
-}
-
-template <typename S, unsigned N>
-const Vect<S,N> operator*(const S &f, const Vect<S,N> &vf)
-{
-    S f0(f * vf.f_);
-    Vect<S,N-1> r0(f * vf.r_);
-    Vect<S,N> ret(f0, r0);
-    return ret;
-}
-
-template <typename S>
-const Vect<S,0> operator*(const S &f, const Vect<S,0> &vf)
-{
-    return vf;
-}
-
-template <typename S, unsigned N>
-const Vect<S,N> operator+(const S &f, const Vect<S,N> &vf)
-{
-    S f0(f + vf.f_);
-    Vect<S,N-1> r0(f + vf.r_);
-    Vect<S,N> ret(f0, r0);
-    return ret;
-}
-
-template <typename S>
-const Vect<S,0> operator+(const S &f, const Vect<S,0> &vf)
-{
-    return vf;
-}
-
-template<typename S, unsigned N>
-class Vect
-{
-public:
-    Vect (const S &f)
-        : f_(f), r_(*((&f)+1)) { }
-    Vect (const S &f, const Vect<S,N-1> &r)
-        : f_(f), r_(r) { }
-    Vect (const Vect<S,N> &o)
-        : f_(o.f_), r_(o.r_) { }
-    Vect<S,N> & operator=(const Vect<S,N> &o) { f_ = o.f_; r_ = o.r_; };
-    friend const Vect<S,N> & operator^=<>(S &, const Vect<S,N> &);
-    friend const Vect<S,N> operator*<>(const S &, const Vect<S,N> &);
-    const Vect<S,N> operator*(const Vect<S,N> &) const;
-    friend const Vect<S,N> operator+<>(const S &, const Vect<S,N> &);
-    const Vect<S,N> operator+(const Vect<S,N> &) const;
-protected:
-    const S f_;
-    Vect<S, N-1> r_;
-};
-
-template<typename S>
-class Vect<S,0>
-{
-public:
-    Vect (const S &) { };
-    Vect (const Vect<S,0> &) { };
-    Vect<S,0> & operator=(const Vect<S,0> &) { };
-    const Vect<S,0> operator*(const Vect<S,0> &) const;
-    const Vect<S,0> operator+(const Vect<S,0> &) const;
-};
-
-template <typename S, unsigned N>
-const Vect<S,N> Vect<S,N>::operator*(const Vect<S,N> &o) const
-{
-    S f0(f_ * o.f_);
-    Vect<S,N-1> r0(r_ * o.r_);
-    Vect<S,N> ret(f0, r0);
-    return ret;
-}
-
-template <typename S>
-const Vect<S,0> Vect<S,0>::operator*(const Vect<S,0> &o) const
-{
-    return o;
-}
-
-template <typename S, unsigned N>
-const Vect<S,N> Vect<S,N>::operator+(const Vect<S,N> &o) const
-{
-    S f0(f_ + o.f_);
-    Vect<S,N-1> r0(r_ + o.r_);
-    Vect<S,N> ret(f0, r0);
-    return ret;
-}
-
-template <typename S>
-const Vect<S,0> Vect<S,0>::operator+(const Vect<S,0> &o) const
-{
-    return o;
-}
 
 typedef vec_float4 * const __restrict__ fp_t;
 void comp_kernel(fp_t dst, const fp_t src, int n)
 {
     const int m(6);
     typedef Vect<vec_float4,m> Float;
-    int i;
-    for (i=0; i+m-1<n; i+=m) {
+    int i=0;
+    for (; i+m-1<n; i+=m) {
         // s_0=v_src[i+0]; s_1=v_src[i+1]; ...
         Float s = src[i];
         // d_0=2*s_0*s_0-100; d_1=2*s_1*s_1-100; ...
@@ -134,8 +26,43 @@ void comp_kernel(fp_t dst, const fp_t src, int n)
     }
 }
 
-#if 0
-const int N(20);
+void comp_kernel0(fp_t dst, const fp_t src, int n)
+{
+    const int m(6);
+    typedef Vect<vec_float4,m> Float;
+    int i=0;
+    for (; i+m-1<n; i+=m) {
+        int i_0 = i, i_1 = i+1, i_2 = i+2, i_3 = i+3, i_4 = i+4, i_5 = i+5;
+        vec_float4 s_0 = src[i_0];
+        vec_float4 s_1 = src[i_1];
+        vec_float4 s_2 = src[i_2];
+        vec_float4 s_3 = src[i_3];
+        vec_float4 s_4 = src[i_4];
+        vec_float4 s_5 = src[i_5];
+        // d_0=2*s_0*s_0-100; d_1=2*s_1*s_1-100; ...
+        // Float d = 2.f*s*s - 100.f;
+        vec_float4 d_0 = spu_splats(2.f)*s_0*s_0 + spu_splats(1.f);
+        vec_float4 d_1 = spu_splats(2.f)*s_1*s_1 + spu_splats(1.f);
+        vec_float4 d_2 = spu_splats(2.f)*s_2*s_2 + spu_splats(1.f);
+        vec_float4 d_3 = spu_splats(2.f)*s_3*s_3 + spu_splats(1.f);
+        vec_float4 d_4 = spu_splats(2.f)*s_4*s_4 + spu_splats(1.f);
+        vec_float4 d_5 = spu_splats(2.f)*s_5*s_5 + spu_splats(1.f);
+        // v_dst[i+0]=d_0; v_dst[i+1]=d_1=; ...
+        dst[i_0] = d_0;
+        dst[i_1] = d_1;
+        dst[i_2] = d_2;
+        dst[i_3] = d_3;
+        dst[i_4] = d_4;
+        dst[i_5] = d_5;
+    }
+    for (; i<n; ++i) {
+        vec_float4 s = src[i];
+        vec_float4 d = spu_splats(2.f)*s*s + spu_splats(1.f);
+        dst[i] = d;
+    }
+}
+
+const int N(1024);
 
 int main(void)
 {
@@ -143,7 +70,7 @@ int main(void)
     for (int i=0; i<N; ++i) {
         a[i] = static_cast<float>(i);
     }
-    comp_kernel(b, a, N);
+    comp_kernel(reinterpret_cast<vec_float4 *>(b), reinterpret_cast<vec_float4 *>(a), N / 4);
     for (int i=0; i<N; ++i) {
         if (i>0) {
             cout << ", " ;
@@ -153,4 +80,3 @@ int main(void)
     cout << endl;
     return 0;
 }
-#endif
