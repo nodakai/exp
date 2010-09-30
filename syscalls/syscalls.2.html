@@ -1,0 +1,645 @@
+
+<HTML>
+<head>
+<title>syscalls(2) - Linux manual page</title>
+<style type="text/css">
+<!--
+body { color:#000000; background-color:#F8F8F8; }
+b    { color:#502000; }
+i    { color:#006000; }
+h2   { color:#A00000; padding-top: 15px; font-size: 100%; }
+h3   { color:#600000; font-size: 100%; padding-top: 10px; padding-left: 20px; }
+pre  { font-family: monospace, courier; }
+a:link    { text-decoration: none; color: blue; }
+a:visited { text-decoration: none; color: blue; }
+a:hover   { text-decoration: underline; color: red; }
+a:active  { text-decoration: underline; background-color: #FFD0D0; }
+//-->
+</style>
+</head>
+<BODY><a name="section_dir"></a>
+<form method="get" action="http://www.google.com/custom">
+<table border=0 cellpadding=0 cellspacing=0 width="100%">
+<tr>
+<td align="left">
+<font size="-1">
+
+<a href="../../../index.html">home</a> &nbsp;
+<a href="../../../contributing.html">contributing</a> &nbsp;
+<a href="../../../reporting_bugs.html">bugs</a> &nbsp;
+<a href="../../../download.html">download</a> &nbsp;
+<a href="../../../online_pages.html">online pages</a> &nbsp;
+</font>
+</td>
+<td align="right">
+<input type="text" name="q" size=10 maxlength=255 value="">
+<input type="hidden" name="sitesearch" value="kernel.org/doc/man-pages/online/pages">
+<input type="submit" name="sa" value="Search online pages">
+</td>
+</tr>
+</table>
+</form>
+<hr>
+<p>
+<table width="100%"><tr><td><font size="-2"><a href="#NAME">NAME</a> | <a href="#SYNOPSIS">SYNOPSIS</a> | <a href="#DESCRIPTION">DESCRIPTION</a> | <a href="#NOTES">NOTES</a> | <a href="#SEE_ALSO">SEE ALSO</a> | <a href="#COLOPHON">COLOPHON</a></font></td><td align="right"><font size="-2"><a href="http://man7.org/tlpi/"><em>The Linux Programming Interface</em></a></font></td></td></tr></table></font>
+<PRE>
+<!-- Manpage converted by man2html 3.0.1 -->
+SYSCALLS(2)                   Linux Programmer's Manual                   SYSCALLS(2)
+</PRE>
+<a name="NAME" href="#NAME"></a><H2>NAME  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#section_dir"><font size="-2">top</font></a></H2><PRE>
+       syscalls - Linux system calls
+</PRE>
+<a name="SYNOPSIS" href="#SYNOPSIS"></a><H2>SYNOPSIS  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#section_dir"><font size="-2">top</font></a></H2><PRE>
+       Linux system calls.
+</PRE>
+<a name="DESCRIPTION" href="#DESCRIPTION"></a><H2>DESCRIPTION  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#section_dir"><font size="-2">top</font></a></H2><PRE>
+       The system call is the fundamental interface between an application and the
+       Linux kernel.
+</PRE><H3>System calls and library wrapper functions</H3>
+<PRE>
+       System calls are generally not invoked directly, but rather via wrapper
+       functions in glibc (or perhaps some other library).  For details of direct
+       invocation of a system call, see <A HREF="../man2/intro.2.html">intro(2)</A>.  Often, but not always, the name of
+       the wrapper function is the same as the name of the system call that it
+       invokes.  For example, glibc contains a function <B>truncate</B>() which invokes the
+       underlying "truncate" system call.
+
+       Often the glibc wrapper function is quite thin, doing little work other than
+       copying arguments to the right registers before invoking the system call, and
+       then setting <I>errno</I> appropriately after the system call has returned.  (These
+       are the same steps that are performed by <A HREF="../man2/syscall.2.html">syscall(2)</A>, which can be used to
+       invoke system calls for which no wrapper function is provided.)  Note: system
+       calls indicate a failure by returning a negative error number to the caller;
+       when this happens, the wrapper function negates the returned error number (to
+       make it positive), copies it to <I>errno</I>, and returns -1 to the caller of the
+       wrapper.
+
+       Sometimes, however, the wrapper function does some extra work before invoking
+       the system call.  For example, nowadays there are (for reasons described
+       below) two related system calls, <A HREF="../man2/truncate.2.html">truncate(2)</A> and <A HREF="../man2/truncate64.2.html">truncate64(2)</A>, and the glibc
+       <B>truncate</B>() wrapper function checks which of those system calls are provided by
+       the kernel and determines which should be employed.
+</PRE><H3>System call list</H3>
+<PRE>
+       Below is a list of those system calls that are common to most platforms.  In
+       the list, the <I>Kernel</I> column indicates the kernel version for those system
+       calls that were new in Linux 2.2, or have appeared since that kernel version.
+       Note the following points:
+
+       *  Where no kernel version is indicated, the system call appeared in kernel
+          1.0 or earlier.
+
+       *  Where a system call is marked "1.2" this means the system call probably
+          appeared in a 1.1.x kernel version, and first appeared in a stable kernel
+          with 1.2.  (Development of the 1.2 kernel was initiated from a branch of
+          kernel 1.0.6 via the 1.1.x unstable kernel series.)
+
+       *  Where a system call is marked "2.0" this means the system call probably
+          appeared in a 1.3.x kernel version, and first appeared in a stable kernel
+          with 2.0.  (Development of the 2.0 kernel was initiated from a branch of
+          kernel 1.2.x, somewhere around 1.2.10, via the 1.3.x unstable kernel
+          series.)
+
+       *  Where a system call is marked "2.2" this means the system call probably
+          appeared in a 2.1.x kernel version, and first appeared in a stable kernel
+          with 2.2.0.  (Development of the 2.2 kernel was initiated from a branch of
+          kernel 2.0.21 via the 2.1.x unstable kernel series.)
+
+       *  Where a system call is marked "2.4" this means the system call probably
+          appeared in a 2.3.x kernel version, and first appeared in a stable kernel
+          with 2.4.0.  (Development of the 2.4 kernel was initiated from a branch of
+          kernel 2.2.8 via the 2.3.x unstable kernel series.)
+
+       *  Where a system call is marked "2.6" this means the system call probably
+          appeared in a 2.5.x kernel version, and first appeared in a stable kernel
+          with 2.6.0.  (Development of kernel 2.6 was initiated from a branch of
+          kernel 2.4.15 via the 2.5.x unstable kernel series.)
+
+       *  Starting with kernel 2.6.0, the development model changed, and new system
+          calls may appear in each 2.6.x release.  In this case, the exact version
+          number where the system call appeared is shown.
+
+       *  In some cases, a system call was added to a stable kernel series after it
+          branched from the previous stable kernel series, and then backported into
+          the earlier stable kernel series.  For example some system calls that
+          appeared in 2.6.x were also backported into a 2.4.x release after 2.4.15.
+          When this is so, the version where the system call appeared in both of the
+          major kernel series is listed.
+
+       The list of system calls that are available as at kernel 2.6.33 (or in a few
+       cases only on older kernels) is as follows:
+
+       <B>System</B> <B>call</B>                 <B>Kernel</B>        <B>Notes</B>
+       -------------------------------------------------------------------------
+
+       <A HREF="../man2/_llseek.2.html">_llseek(2)</A>                  1.2
+       <A HREF="../man2/_newselect.2.html">_newselect(2)</A>
+       <A HREF="../man2/_sysctl.2.html">_sysctl(2)</A>
+       <A HREF="../man2/accept.2.html">accept(2)</A>
+       <A HREF="../man2/accept4.2.html">accept4(2)</A>                  2.6.28
+       <A HREF="../man2/access.2.html">access(2)</A>
+       <A HREF="../man2/acct.2.html">acct(2)</A>
+       <A HREF="../man2/add_key.2.html">add_key(2)</A>                  2.6.11
+       <A HREF="../man2/adjtimex.2.html">adjtimex(2)</A>
+       <A HREF="../man2/afs_syscall.2.html">afs_syscall(2)</A>                            Not implemented
+       <A HREF="../man2/alarm.2.html">alarm(2)</A>
+       <A HREF="../man2/alloc_hugepages.2.html">alloc_hugepages(2)</A>          2.5.36        Removed in 2.5.44
+       <A HREF="../man2/bdflush.2.html">bdflush(2)</A>
+       <A HREF="../man2/bind.2.html">bind(2)</A>
+       <A HREF="../man2/break.2.html">break(2)</A>                                  Not implemented
+       <A HREF="../man2/brk.2.html">brk(2)</A>
+       <A HREF="../man2/cacheflush.2.html">cacheflush(2)</A>               1.2           Not on i386
+       <A HREF="../man2/capget.2.html">capget(2)</A>                   2.2
+       <A HREF="../man2/capset.2.html">capset(2)</A>                   2.2
+       <A HREF="../man2/chdir.2.html">chdir(2)</A>
+       <A HREF="../man2/chmod.2.html">chmod(2)</A>
+       <A HREF="../man2/chown.2.html">chown(2)</A>
+       <A HREF="../man2/chown32.2.html">chown32(2)</A>                  2.4
+       <A HREF="../man2/chroot.2.html">chroot(2)</A>
+       <A HREF="../man2/clock_getres.2.html">clock_getres(2)</A>             2.6
+       <A HREF="../man2/clock_gettime.2.html">clock_gettime(2)</A>            2.6
+       <A HREF="../man2/clock_nanosleep.2.html">clock_nanosleep(2)</A>          2.6
+       <A HREF="../man2/clock_settime.2.html">clock_settime(2)</A>            2.6
+       <A HREF="../man2/clone.2.html">clone(2)</A>
+       <A HREF="../man2/close.2.html">close(2)</A>
+       <A HREF="../man2/connect.2.html">connect(2)</A>
+       <A HREF="../man2/creat.2.html">creat(2)</A>
+       <A HREF="../man2/create_module.2.html">create_module(2)</A>
+       <A HREF="../man2/delete_module.2.html">delete_module(2)</A>
+       <A HREF="../man2/dup.2.html">dup(2)</A>
+       <A HREF="../man2/dup2.2.html">dup2(2)</A>
+       <A HREF="../man2/dup3.2.html">dup3(2)</A>                     2.6.27
+       <A HREF="../man2/epoll_create.2.html">epoll_create(2)</A>             2.6
+       <A HREF="../man2/epoll_create1.2.html">epoll_create1(2)</A>            2.6.27
+       <A HREF="../man2/epoll_ctl.2.html">epoll_ctl(2)</A>                2.6
+       <A HREF="../man2/epoll_pwait.2.html">epoll_pwait(2)</A>              2.6.19
+
+       <A HREF="../man2/epoll_wait.2.html">epoll_wait(2)</A>               2.6
+       <A HREF="../man2/eventfd.2.html">eventfd(2)</A>                  2.6.22
+       <A HREF="../man2/eventfd2.2.html">eventfd2(2)</A>                 2.6.27
+       <A HREF="../man2/execve.2.html">execve(2)</A>
+       <A HREF="../man2/exit.2.html">exit(2)</A>
+       <A HREF="../man2/exit_group.2.html">exit_group(2)</A>               2.6
+       <A HREF="../man2/faccessat.2.html">faccessat(2)</A>                2.6.16
+       <A HREF="../man2/fadvise64.2.html">fadvise64(2)</A>                2.6
+       <A HREF="../man2/fadvise64_64.2.html">fadvise64_64(2)</A>             2.6
+       <A HREF="../man2/fallocate.2.html">fallocate(2)</A>                2.6.23
+       <A HREF="../man2/fchdir.2.html">fchdir(2)</A>
+       <A HREF="../man2/fchmod.2.html">fchmod(2)</A>
+       <A HREF="../man2/fchmodat.2.html">fchmodat(2)</A>                 2.6.16
+       <A HREF="../man2/fchown.2.html">fchown(2)</A>
+       <A HREF="../man2/fchown32.2.html">fchown32(2)</A>                 2.4
+       <A HREF="../man2/fchownat.2.html">fchownat(2)</A>                 2.6.16
+       <A HREF="../man2/fcntl.2.html">fcntl(2)</A>
+       <A HREF="../man2/fcntl64.2.html">fcntl64(2)</A>                  2.4
+       <A HREF="../man2/fdatasync.2.html">fdatasync(2)</A>
+       <A HREF="../man2/fgetxattr.2.html">fgetxattr(2)</A>                2.6; 2.4.18
+       <A HREF="../man2/flistxattr.2.html">flistxattr(2)</A>               2.6; 2.4.18
+       <A HREF="../man2/flock.2.html">flock(2)</A>                    2.0
+       <A HREF="../man2/fork.2.html">fork(2)</A>
+       <A HREF="../man2/free_hugepages.2.html">free_hugepages(2)</A>           2.5.36        Removed in 2.5.44
+       <A HREF="../man2/fremovexattr.2.html">fremovexattr(2)</A>             2.6; 2.4.18
+       <A HREF="../man2/fsetxattr.2.html">fsetxattr(2)</A>                2.6; 2.4.18
+       <A HREF="../man2/fstat.2.html">fstat(2)</A>
+       <A HREF="../man2/fstat64.2.html">fstat64(2)</A>                  2.4
+       <A HREF="../man2/fstatat64.2.html">fstatat64(2)</A>                2.6.16
+       <A HREF="../man2/fstatfs.2.html">fstatfs(2)</A>
+       <A HREF="../man2/fstatfs64.2.html">fstatfs64(2)</A>                2.6
+       <A HREF="../man2/fsync.2.html">fsync(2)</A>
+       <A HREF="../man2/ftime.2.html">ftime(2)</A>                                  Not implemented
+       <A HREF="../man2/ftruncate.2.html">ftruncate(2)</A>
+       <A HREF="../man2/ftruncate64.2.html">ftruncate64(2)</A>              2.4
+       <A HREF="../man2/futex.2.html">futex(2)</A>                    2.6
+       <A HREF="../man2/futimesat.2.html">futimesat(2)</A>                2.6.16
+       <A HREF="../man2/get_kernel_syms.2.html">get_kernel_syms(2)</A>
+       <A HREF="../man2/get_mempolicy.2.html">get_mempolicy(2)</A>            2.6.6
+       <A HREF="../man2/get_robust_list.2.html">get_robust_list(2)</A>          2.6.17
+       <A HREF="../man2/get_thread_area.2.html">get_thread_area(2)</A>          2.6
+       <A HREF="../man2/getcpu.2.html">getcpu(2)</A>                   2.6.19
+       <A HREF="../man2/getcwd.2.html">getcwd(2)</A>                   2.2
+       <A HREF="../man2/getdents.2.html">getdents(2)</A>                 2.0
+       <A HREF="../man2/getdents64.2.html">getdents64(2)</A>               2.4
+       <A HREF="../man2/getegid.2.html">getegid(2)</A>
+       <A HREF="../man2/getegid32.2.html">getegid32(2)</A>                2.4
+       <A HREF="../man2/geteuid.2.html">geteuid(2)</A>
+       <A HREF="../man2/geteuid32.2.html">geteuid32(2)</A>                2.4
+       <A HREF="../man2/getgid.2.html">getgid(2)</A>
+       <A HREF="../man2/getgid32.2.html">getgid32(2)</A>                 2.4
+       <A HREF="../man2/getgroups.2.html">getgroups(2)</A>
+       <A HREF="../man2/getgroups32.2.html">getgroups32(2)</A>              2.4
+       <A HREF="../man2/getitimer.2.html">getitimer(2)</A>
+       <A HREF="../man2/getpeername.2.html">getpeername(2)</A>
+       <A HREF="../man2/getpagesize.2.html">getpagesize(2)</A>              2.0           Not on i386
+       <A HREF="../man2/getpgid.2.html">getpgid(2)</A>
+       <A HREF="../man2/getpgrp.2.html">getpgrp(2)</A>
+       <A HREF="../man2/getpid.2.html">getpid(2)</A>
+       <A HREF="../man2/getpmsg.2.html">getpmsg(2)</A>                                Not implemented
+       <A HREF="../man2/getppid.2.html">getppid(2)</A>
+       <A HREF="../man2/getpriority.2.html">getpriority(2)</A>
+       <A HREF="../man2/getresgid.2.html">getresgid(2)</A>                2.2
+       <A HREF="../man2/getresgid32.2.html">getresgid32(2)</A>              2.4
+       <A HREF="../man2/getresuid.2.html">getresuid(2)</A>                2.2
+
+       <A HREF="../man2/getresuid32.2.html">getresuid32(2)</A>              2.4
+       <A HREF="../man2/getrlimit.2.html">getrlimit(2)</A>
+       <A HREF="../man2/getrusage.2.html">getrusage(2)</A>
+       <A HREF="../man2/getsid.2.html">getsid(2)</A>                   2.0
+       <A HREF="../man2/getsockname.2.html">getsockname(2)</A>
+       <A HREF="../man2/getsockopt.2.html">getsockopt(2)</A>
+       <A HREF="../man2/gettid.2.html">gettid(2)</A>                   2.4.11
+       <A HREF="../man2/gettimeofday.2.html">gettimeofday(2)</A>
+       <A HREF="../man2/getuid.2.html">getuid(2)</A>
+       <A HREF="../man2/getuid32.2.html">getuid32(2)</A>                 2.4
+       <A HREF="../man2/getxattr.2.html">getxattr(2)</A>                 2.6; 2.4.18
+       <A HREF="../man2/gtty.2.html">gtty(2)</A>                                   Not implemented
+       <A HREF="../man2/idle.2.html">idle(2)</A>                                   Not implemented
+       <A HREF="../man2/init_module.2.html">init_module(2)</A>
+       <A HREF="../man2/inotify_add_watch.2.html">inotify_add_watch(2)</A>        2.6.13
+       <A HREF="../man2/inotify_init.2.html">inotify_init(2)</A>             2.6.13
+       <A HREF="../man2/inotify_init1.2.html">inotify_init1(2)</A>            2.6.27
+       <A HREF="../man2/inotify_rm_watch.2.html">inotify_rm_watch(2)</A>         2.6.13
+       <A HREF="../man2/io_cancel.2.html">io_cancel(2)</A>                2.6
+       <A HREF="../man2/io_destroy.2.html">io_destroy(2)</A>               2.6
+       <A HREF="../man2/io_getevents.2.html">io_getevents(2)</A>             2.6
+       <A HREF="../man2/io_setup.2.html">io_setup(2)</A>                 2.6
+       <A HREF="../man2/io_submit.2.html">io_submit(2)</A>                2.6
+       <A HREF="../man2/ioctl.2.html">ioctl(2)</A>
+       <A HREF="../man2/ioperm.2.html">ioperm(2)</A>
+       <A HREF="../man2/iopl.2.html">iopl(2)</A>
+       <A HREF="../man2/ioprio_get.2.html">ioprio_get(2)</A>               2.6.13
+       <A HREF="../man2/ioprio_set.2.html">ioprio_set(2)</A>               2.6.13
+       <A HREF="../man2/ipc.2.html">ipc(2)</A>
+       <A HREF="../man2/kexec_load.2.html">kexec_load(2)</A>               2.6.7
+       <A HREF="../man2/keyctl.2.html">keyctl(2)</A>                   2.6.11
+       <A HREF="../man2/kill.2.html">kill(2)</A>
+       <A HREF="../man2/lchown.2.html">lchown(2)</A>                   2.2
+       <A HREF="../man2/lchown32.2.html">lchown32(2)</A>                 2.4
+       <A HREF="../man2/lgetxattr.2.html">lgetxattr(2)</A>                2.6; 2.4.18
+       <A HREF="../man2/link.2.html">link(2)</A>
+       <A HREF="../man2/linkat.2.html">linkat(2)</A>                   2.6.16
+       <A HREF="../man2/listen.2.html">listen(2)</A>
+       <A HREF="../man2/listxattr.2.html">listxattr(2)</A>                2.6; 2.4.18
+       <A HREF="../man2/llistxattr.2.html">llistxattr(2)</A>               2.6; 2.4.18
+       <A HREF="../man2/lock.2.html">lock(2)</A>                                   Not implemented
+       <A HREF="../man2/lookup_dcookie.2.html">lookup_dcookie(2)</A>           2.6
+       <A HREF="../man2/lremovexattr.2.html">lremovexattr(2)</A>             2.6; 2.4.18
+       <A HREF="../man2/lseek.2.html">lseek(2)</A>
+       <A HREF="../man2/lsetxattr.2.html">lsetxattr(2)</A>                2.6; 2.4.18
+       <A HREF="../man2/lstat.2.html">lstat(2)</A>
+       <A HREF="../man2/lstat64.2.html">lstat64(2)</A>                  2.4
+       <A HREF="../man2/madvise.2.html">madvise(2)</A>                  2.4
+       <A HREF="../man2/madvise1.2.html">madvise1(2)</A>                 2.4
+       <A HREF="../man2/mbind.2.html">mbind(2)</A>                    2.6.6
+       <A HREF="../man2/migrate_pages.2.html">migrate_pages(2)</A>            2.6.16
+       <A HREF="../man2/mincore.2.html">mincore(2)</A>                  2.4
+       <A HREF="../man2/mkdir.2.html">mkdir(2)</A>
+       <A HREF="../man2/mkdirat.2.html">mkdirat(2)</A>                  2.6.16
+       <A HREF="../man2/mknod.2.html">mknod(2)</A>
+       <A HREF="../man2/mknodat.2.html">mknodat(2)</A>                  2.6.16
+       <A HREF="../man2/mlock.2.html">mlock(2)</A>
+       <A HREF="../man2/mlockall.2.html">mlockall(2)</A>
+       <A HREF="../man2/mmap.2.html">mmap(2)</A>
+       <A HREF="../man2/mmap2.2.html">mmap2(2)</A>                    2.4
+       <A HREF="../man2/modify_ldt.2.html">modify_ldt(2)</A>
+       <A HREF="../man2/mount.2.html">mount(2)</A>
+       <A HREF="../man2/move_pages.2.html">move_pages(2)</A>               2.6.18
+       <A HREF="../man2/mprotect.2.html">mprotect(2)</A>
+       <A HREF="../man2/mpx.2.html">mpx(2)</A>                                    Not implemented
+
+       <A HREF="../man2/mq_getsetattr.2.html">mq_getsetattr(2)</A>            2.6.6
+       <A HREF="../man2/mq_notify.2.html">mq_notify(2)</A>                2.6.6
+       <A HREF="../man2/mq_open.2.html">mq_open(2)</A>                  2.6.6
+       <A HREF="../man2/mq_timedreceive.2.html">mq_timedreceive(2)</A>          2.6.6
+       <A HREF="../man2/mq_timedsend.2.html">mq_timedsend(2)</A>             2.6.6
+       <A HREF="../man2/mq_unlink.2.html">mq_unlink(2)</A>
+       <A HREF="../man2/mremap.2.html">mremap(2)</A>                   2.0
+       <A HREF="../man2/msgctl.2.html">msgctl(2)</A>
+       <A HREF="../man2/msgget.2.html">msgget(2)</A>
+       <A HREF="../man2/msgrcv.2.html">msgrcv(2)</A>
+       <A HREF="../man2/msgsnd.2.html">msgsnd(2)</A>
+       <A HREF="../man2/msync.2.html">msync(2)</A>                    2.0
+       <A HREF="../man2/munlock.2.html">munlock(2)</A>
+       <A HREF="../man2/munlockall.2.html">munlockall(2)</A>
+       <A HREF="../man2/munmap.2.html">munmap(2)</A>
+       <A HREF="../man2/nanosleep.2.html">nanosleep(2)</A>                2.0
+       <A HREF="../man2/nfsservctl.2.html">nfsservctl(2)</A>               2.2
+       <A HREF="../man2/nice.2.html">nice(2)</A>
+       <A HREF="../man2/oldfstat.2.html">oldfstat(2)</A>
+       <A HREF="../man2/oldlstat.2.html">oldlstat(2)</A>
+       <A HREF="../man2/oldolduname.2.html">oldolduname(2)</A>
+       <A HREF="../man2/oldstat.2.html">oldstat(2)</A>
+       <A HREF="../man2/olduname.2.html">olduname(2)</A>
+       <A HREF="../man2/open.2.html">open(2)</A>
+       <A HREF="../man2/openat.2.html">openat(2)</A>                   2.6.16
+       <A HREF="../man2/pause.2.html">pause(2)</A>
+       <A HREF="../man2/pciconfig_iobase.2.html">pciconfig_iobase(2)</A>         2.2.15; 2.4   Not on i386
+       <A HREF="../man2/pciconfig_read.2.html">pciconfig_read(2)</A>           2.0.26; 2.2   Not on i386
+       <A HREF="../man2/pciconfig_write.2.html">pciconfig_write(2)</A>          2.0.26; 2.2   Not on i386
+       <A HREF="../man2/perf_event_open.2.html">perf_event_open(2)</A>          2.6.31        Was called perf_counter_open()
+                                                 in 2.6.31; renamed in 2.6.32
+       <A HREF="../man2/personality.2.html">personality(2)</A>              1.2
+       <A HREF="../man2/phys.2.html">phys(2)</A>                                   Not implemented
+       <A HREF="../man2/pipe.2.html">pipe(2)</A>
+       <A HREF="../man2/pipe2.2.html">pipe2(2)</A>                    2.6.27
+       <A HREF="../man2/pivot_root.2.html">pivot_root(2)</A>               2.4
+       <A HREF="../man2/poll.2.html">poll(2)</A>                     2.2
+       <A HREF="../man2/ppoll.2.html">ppoll(2)</A>                    2.6.16
+       <A HREF="../man2/prctl.2.html">prctl(2)</A>                    2.2
+       <A HREF="../man2/pread64.2.html">pread64(2)</A>                                Added as "pread" in 2.2;
+                                                 renamed "pread64" in 2.6
+       <A HREF="../man2/preadv.2.html">preadv(2)</A>                   2.6.30
+       <A HREF="../man2/prof.2.html">prof(2)</A>                                   Not implemented
+       <A HREF="../man2/profil.2.html">profil(2)</A>                                 Not implemented
+       <A HREF="../man2/pselect6.2.html">pselect6(2)</A>                 2.6.16
+       <A HREF="../man2/ptrace.2.html">ptrace(2)</A>
+       <A HREF="../man2/putpmsg.2.html">putpmsg(2)</A>                                Not implemented
+       <A HREF="../man2/pwrite64.2.html">pwrite64(2)</A>                               Added as "pwrite" in 2.2;
+                                                 renamed "pwrite64" in 2.6
+       <A HREF="../man2/pwritev.2.html">pwritev(2)</A>                  2.6.30
+       <A HREF="../man2/query_module.2.html">query_module(2)</A>             2.2
+       <A HREF="../man2/quotactl.2.html">quotactl(2)</A>
+       <A HREF="../man2/read.2.html">read(2)</A>
+       <A HREF="../man2/readahead.2.html">readahead(2)</A>                2.4.13
+       <A HREF="../man2/readdir.2.html">readdir(2)</A>
+       <A HREF="../man2/readlink.2.html">readlink(2)</A>
+       <A HREF="../man2/readlinkat.2.html">readlinkat(2)</A>               2.6.16
+       <A HREF="../man2/readv.2.html">readv(2)</A>                    2.0
+       <A HREF="../man2/reboot.2.html">reboot(2)</A>
+       <A HREF="../man2/recv.2.html">recv(2)</A>
+       <A HREF="../man2/recvfrom.2.html">recvfrom(2)</A>
+       <A HREF="../man2/recvmsg.2.html">recvmsg(2)</A>
+       <A HREF="../man2/recvmmsg.2.html">recvmmsg(2)</A>                 2.6.33
+       <A HREF="../man2/remap_file_pages.2.html">remap_file_pages(2)</A>         2.6
+       <A HREF="../man2/removexattr.2.html">removexattr(2)</A>              2.6; 2.4.18
+
+       <A HREF="../man2/rename.2.html">rename(2)</A>
+       <A HREF="../man2/renameat.2.html">renameat(2)</A>                 2.6.16
+       <A HREF="../man2/request_key.2.html">request_key(2)</A>              2.6.11
+       <A HREF="../man2/restart_syscall.2.html">restart_syscall(2)</A>          2.6
+       <A HREF="../man2/rmdir.2.html">rmdir(2)</A>
+       <A HREF="../man2/rt_sigaction.2.html">rt_sigaction(2)</A>             2.2
+       <A HREF="../man2/rt_sigpending.2.html">rt_sigpending(2)</A>            2.2
+       <A HREF="../man2/rt_sigprocmask.2.html">rt_sigprocmask(2)</A>           2.2
+       <A HREF="../man2/rt_sigqueueinfo.2.html">rt_sigqueueinfo(2)</A>          2.2
+       <A HREF="../man2/rt_sigreturn.2.html">rt_sigreturn(2)</A>             2.2
+       <A HREF="../man2/rt_sigsuspend.2.html">rt_sigsuspend(2)</A>            2.2
+       <A HREF="../man2/rt_sigtimedwait.2.html">rt_sigtimedwait(2)</A>          2.2
+       <A HREF="../man2/rt_tgsigqueueinfo.2.html">rt_tgsigqueueinfo(2)</A>        2.6.31
+       <A HREF="../man2/sched_get_priority_max.2.html">sched_get_priority_max(2)</A>   2.0
+       <A HREF="../man2/sched_get_priority_min.2.html">sched_get_priority_min(2)</A>   2.0
+       <A HREF="../man2/sched_getaffinity.2.html">sched_getaffinity(2)</A>        2.6
+       <A HREF="../man2/sched_getparam.2.html">sched_getparam(2)</A>           2.0
+       <A HREF="../man2/sched_getscheduler.2.html">sched_getscheduler(2)</A>       2.0
+       <A HREF="../man2/sched_rr_get_interval.2.html">sched_rr_get_interval(2)</A>    2.0
+       <A HREF="../man2/sched_setaffinity.2.html">sched_setaffinity(2)</A>        2.6
+       <A HREF="../man2/sched_setparam.2.html">sched_setparam(2)</A>           2.0
+       <A HREF="../man2/sched_setscheduler.2.html">sched_setscheduler(2)</A>       2.0
+       <A HREF="../man2/sched_yield.2.html">sched_yield(2)</A>              2.0
+       <A HREF="../man2/security.2.html">security(2)</A>                               Not implemented
+       <A HREF="../man2/select.2.html">select(2)</A>
+       <A HREF="../man2/semctl.2.html">semctl(2)</A>
+       <A HREF="../man2/semget.2.html">semget(2)</A>
+       <A HREF="../man2/semop.2.html">semop(2)</A>
+       <A HREF="../man2/semtimedop.2.html">semtimedop(2)</A>               2.6; 2.4.22
+       <A HREF="../man2/send.2.html">send(2)</A>
+       <A HREF="../man2/sendfile.2.html">sendfile(2)</A>                 2.2
+       <A HREF="../man2/sendfile64.2.html">sendfile64(2)</A>               2.6; 2.4.19
+       <A HREF="../man2/sendmsg.2.html">sendmsg(2)</A>
+       <A HREF="../man2/sendto.2.html">sendto(2)</A>
+       <A HREF="../man2/set_mempolicy.2.html">set_mempolicy(2)</A>            2.6.6
+       <A HREF="../man2/set_robust_list.2.html">set_robust_list(2)</A>          2.6.17
+       <A HREF="../man2/set_thread_area.2.html">set_thread_area(2)</A>          2.6
+       <A HREF="../man2/set_tid_address.2.html">set_tid_address(2)</A>          2.6
+       <A HREF="../man2/set_zone_reclaim.2.html">set_zone_reclaim(2)</A>         2.6.13        Removed in 2.6.16 (was never
+                                                 available to userspace)
+       <A HREF="../man2/setdomainname.2.html">setdomainname(2)</A>
+       <A HREF="../man2/setfsgid.2.html">setfsgid(2)</A>                 1.2
+       <A HREF="../man2/setfsgid32.2.html">setfsgid32(2)</A>               2.4
+       <A HREF="../man2/setfsuid.2.html">setfsuid(2)</A>                 1.2
+       <A HREF="../man2/setfsuid32.2.html">setfsuid32(2)</A>               2.4
+       <A HREF="../man2/setgid.2.html">setgid(2)</A>
+       <A HREF="../man2/setgid32.2.html">setgid32(2)</A>                 2.4
+       <A HREF="../man2/setgroups.2.html">setgroups(2)</A>
+       <A HREF="../man2/setgroups32.2.html">setgroups32(2)</A>              2.4
+       <A HREF="../man2/sethostname.2.html">sethostname(2)</A>
+       <A HREF="../man2/setitimer.2.html">setitimer(2)</A>
+       <A HREF="../man2/setpgid.2.html">setpgid(2)</A>
+       <A HREF="../man2/setpriority.2.html">setpriority(2)</A>
+       <A HREF="../man2/setregid.2.html">setregid(2)</A>
+       <A HREF="../man2/setregid32.2.html">setregid32(2)</A>               2.4
+       <A HREF="../man2/setresgid.2.html">setresgid(2)</A>                2.2
+       <A HREF="../man2/setresgid32.2.html">setresgid32(2)</A>              2.4
+       <A HREF="../man2/setresuid.2.html">setresuid(2)</A>                2.2
+       <A HREF="../man2/setresuid32.2.html">setresuid32(2)</A>              2.4
+       <A HREF="../man2/setreuid.2.html">setreuid(2)</A>
+       <A HREF="../man2/setreuid32.2.html">setreuid32(2)</A>               2.4
+       <A HREF="../man2/setrlimit.2.html">setrlimit(2)</A>
+       <A HREF="../man2/setsid.2.html">setsid(2)</A>
+       <A HREF="../man2/setsockopt.2.html">setsockopt(2)</A>
+       <A HREF="../man2/settimeofday.2.html">settimeofday(2)</A>
+
+       <A HREF="../man2/setuid.2.html">setuid(2)</A>
+       <A HREF="../man2/setuid32.2.html">setuid32(2)</A>                 2.4
+       <A HREF="../man2/setup.2.html">setup(2)</A>                                  Removed in 2.2
+       <A HREF="../man2/setxattr.2.html">setxattr(2)</A>                 2.6; 2.4.18
+       <A HREF="../man2/sgetmask.2.html">sgetmask(2)</A>
+       <A HREF="../man2/shmat.2.html">shmat(2)</A>
+       <A HREF="../man2/shmctl.2.html">shmctl(2)</A>
+       <A HREF="../man2/shmdt.2.html">shmdt(2)</A>
+       <A HREF="../man2/shmget.2.html">shmget(2)</A>
+       <A HREF="../man2/shutdown.2.html">shutdown(2)</A>
+       <A HREF="../man2/sigaction.2.html">sigaction(2)</A>
+       <A HREF="../man2/sigaltstack.2.html">sigaltstack(2)</A>              2.2
+       <A HREF="../man2/signal.2.html">signal(2)</A>
+       <A HREF="../man2/signalfd.2.html">signalfd(2)</A>                 2.6.22
+       <A HREF="../man2/signalfd4.2.html">signalfd4(2)</A>                2.6.27
+       <A HREF="../man2/sigpending.2.html">sigpending(2)</A>
+       <A HREF="../man2/sigprocmask.2.html">sigprocmask(2)</A>
+       <A HREF="../man2/sigreturn.2.html">sigreturn(2)</A>
+       <A HREF="../man2/sigsuspend.2.html">sigsuspend(2)</A>
+       <A HREF="../man2/socket.2.html">socket(2)</A>
+       <A HREF="../man2/socketcall.2.html">socketcall(2)</A>
+       <A HREF="../man2/socketpair.2.html">socketpair(2)</A>
+       <A HREF="../man2/splice.2.html">splice(2)</A>                   2.6.17
+       <A HREF="../man2/spu_create.2.html">spu_create(2)</A>               2.6.16        PowerPC only
+       <A HREF="../man2/spu_run.2.html">spu_run(2)</A>                  2.6.16        PowerPC only
+       <A HREF="../man2/ssetmask.2.html">ssetmask(2)</A>
+       <A HREF="../man2/stat.2.html">stat(2)</A>
+       <A HREF="../man2/stat64.2.html">stat64(2)</A>                   2.4
+       <A HREF="../man2/statfs.2.html">statfs(2)</A>
+       <A HREF="../man2/statfs64.2.html">statfs64(2)</A>                 2.6
+       <A HREF="../man2/stime.2.html">stime(2)</A>
+       <A HREF="../man2/stty.2.html">stty(2)</A>                                   Not implemented
+       <A HREF="../man2/swapoff.2.html">swapoff(2)</A>
+       <A HREF="../man2/swapon.2.html">swapon(2)</A>
+       <A HREF="../man2/symlink.2.html">symlink(2)</A>
+       <A HREF="../man2/symlinkat.2.html">symlinkat(2)</A>                2.6.16
+       <A HREF="../man2/sync.2.html">sync(2)</A>
+       <A HREF="../man2/sync_file_range.2.html">sync_file_range(2)</A>          2.6.17
+       <A HREF="../man2/sysfs.2.html">sysfs(2)</A>                    1.2
+       <A HREF="../man2/sysinfo.2.html">sysinfo(2)</A>
+       <A HREF="../man2/syslog.2.html">syslog(2)</A>
+       <A HREF="../man2/tee.2.html">tee(2)</A>                      2.6.17
+       <A HREF="../man2/tgkill.2.html">tgkill(2)</A>                   2.6
+       <A HREF="../man2/time.2.html">time(2)</A>
+       <A HREF="../man2/timer_create.2.html">timer_create(2)</A>             2.6
+       <A HREF="../man2/timer_delete.2.html">timer_delete(2)</A>             2.6
+       <A HREF="../man2/timer_getoverrun.2.html">timer_getoverrun(2)</A>         2.6
+       <A HREF="../man2/timer_gettime.2.html">timer_gettime(2)</A>            2.6
+       <A HREF="../man2/timer_settime.2.html">timer_settime(2)</A>            2.6
+       <A HREF="../man2/timerfd_create.2.html">timerfd_create(2)</A>           2.6.25
+       <A HREF="../man2/timerfd_gettime.2.html">timerfd_gettime(2)</A>          2.6.25
+       <A HREF="../man2/timerfd_settime.2.html">timerfd_settime(2)</A>          2.6.25
+       <A HREF="../man2/times.2.html">times(2)</A>
+       <A HREF="../man2/tkill.2.html">tkill(2)</A>                    2.6; 2.4.22
+       <A HREF="../man2/truncate.2.html">truncate(2)</A>
+       <A HREF="../man2/truncate64.2.html">truncate64(2)</A>               2.4
+       <A HREF="../man2/tuxcall.2.html">tuxcall(2)</A>                                Not implemented
+       <A HREF="../man2/ugetrlimit.2.html">ugetrlimit(2)</A>               2.4
+       <A HREF="../man2/ulimit.2.html">ulimit(2)</A>                                 Not implemented
+       <A HREF="../man2/umask.2.html">umask(2)</A>
+       <A HREF="../man2/umount.2.html">umount(2)</A>
+       <A HREF="../man2/umount2.2.html">umount2(2)</A>                  2.2
+       <A HREF="../man2/uname.2.html">uname(2)</A>
+       <A HREF="../man2/unlink.2.html">unlink(2)</A>
+       <A HREF="../man2/unlinkat.2.html">unlinkat(2)</A>                 2.6.16
+
+       <A HREF="../man2/unshare.2.html">unshare(2)</A>                  2.6.16
+       <A HREF="../man2/uselib.2.html">uselib(2)</A>
+       <A HREF="../man2/ustat.2.html">ustat(2)</A>
+       <A HREF="../man2/utime.2.html">utime(2)</A>
+       <A HREF="../man2/utimensat.2.html">utimensat(2)</A>                2.6.22
+       <A HREF="../man2/utimes.2.html">utimes(2)</A>                   2.2
+       <A HREF="../man2/vfork.2.html">vfork(2)</A>
+       <A HREF="../man2/vhangup.2.html">vhangup(2)</A>
+       <A HREF="../man2/vm86old.2.html">vm86old(2)</A>
+       <A HREF="../man2/vmsplice.2.html">vmsplice(2)</A>                 2.6.17
+       <A HREF="../man2/vserver.2.html">vserver(2)</A>                                Not implemented
+       <A HREF="../man2/wait4.2.html">wait4(2)</A>
+       <A HREF="../man2/waitid.2.html">waitid(2)</A>                   2.6.10
+       <A HREF="../man2/waitpid.2.html">waitpid(2)</A>
+       <A HREF="../man2/write.2.html">write(2)</A>
+       <A HREF="../man2/writev.2.html">writev(2)</A>                   2.0
+
+       On many platforms, including i386, socket calls are all multiplexed (via glibc
+       wrapper functions) through <A HREF="../man2/socketcall.2.html">socketcall(2)</A> and similarly System V IPC calls are
+       multiplexed through <A HREF="../man2/ipc.2.html">ipc(2)</A>.
+</PRE>
+<a name="NOTES" href="#NOTES"></a><H2>NOTES  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#section_dir"><font size="-2">top</font></a></H2><PRE>
+       Note the following points:
+
+       *  Although slots are reserved for them in the system call table, the
+          following system calls are not implemented in the standard kernel:
+          <A HREF="../man2/afs_syscall.2.html">afs_syscall(2)</A>, <A HREF="../man2/break.2.html">break(2)</A>, <A HREF="../man2/ftime.2.html">ftime(2)</A>, <A HREF="../man2/getpmsg.2.html">getpmsg(2)</A>, <A HREF="../man2/gtty.2.html">gtty(2)</A>, <A HREF="../man2/idle.2.html">idle(2)</A>, <A HREF="../man2/lock.2.html">lock(2)</A>,
+          <A HREF="../man2/madvise1.2.html">madvise1(2)</A>, <A HREF="../man2/mpx.2.html">mpx(2)</A>, <A HREF="../man2/phys.2.html">phys(2)</A>, <A HREF="../man2/prof.2.html">prof(2)</A>, <A HREF="../man2/profil.2.html">profil(2)</A>, <A HREF="../man2/putpmsg.2.html">putpmsg(2)</A>, <A HREF="../man2/security.2.html">security(2)</A>,
+          <A HREF="../man2/stty.2.html">stty(2)</A>, <A HREF="../man2/tuxcall.2.html">tuxcall(2)</A>, <A HREF="../man2/ulimit.2.html">ulimit(2)</A>, and <A HREF="../man2/vserver.2.html">vserver(2)</A> (see also <A HREF="../man2/unimplemented.2.html">unimplemented(2)</A>).
+          However, <A HREF="../man3/ftime.3.html">ftime(3)</A>, <A HREF="../man3/profil.3.html">profil(3)</A> and <A HREF="../man3/ulimit.3.html">ulimit(3)</A> exist as library routines.  The
+          slot for <A HREF="../man2/phys.2.html">phys(2)</A> is in use since kernel 2.1.116 for <A HREF="../man2/umount.2.html">umount(2)</A>; <A HREF="../man2/phys.2.html">phys(2)</A> will
+          never be implemented.
+
+       *  The <A HREF="../man2/getpmsg.2.html">getpmsg(2)</A> and <A HREF="../man2/putpmsg.2.html">putpmsg(2)</A> calls are for kernels patched to support
+          STREAMS, and may never be in the standard kernel.
+
+       Roughly speaking, the code belonging to the system call with number __NR_xxx
+       defined in <I>/usr/include/asm/unistd.h</I> can be found in the kernel source in the
+       routine <I>sys_xxx</I>().  (The dispatch table for i386 can be found in
+       <I>/usr/src/linux/arch/i386/kernel/entry.S</I>.)  There are many exceptions, however,
+       mostly because older system calls were superseded by newer ones, and this has
+       been treated somewhat unsystematically.  On platforms with proprietary OS
+       emulation, such as parisc, sparc, sparc64 and alpha, there are many additional
+       system calls; mips64 also contains a full set of 32-bit system calls.
+
+       Over time, changes to the interfaces of some system calls have been necessary.
+       One reason for such changes was the need to increase the size of structures or
+       scalar values passed to the system call.  Because of these changes, there are
+       now various groups of related system calls (e.g., <A HREF="../man2/truncate.2.html">truncate(2)</A> and
+       <A HREF="../man2/truncate64.2.html">truncate64(2)</A>) which perform similar tasks, but which vary in details such as
+       the size of their arguments.  (As noted earlier, applications are generally
+       unaware of this: the glibc wrapper functions do some work to ensure that the
+       right system call is invoked, and that ABI compatibility is preserved for old
+       binaries.)  Examples of systems calls that exist in multiple versions are the
+       following:
+
+       *  By now there are three different versions of <A HREF="../man2/stat.2.html">stat(2)</A>: <I>sys_stat</I>() (slot
+          <I>__NR_oldstat</I>), <I>sys_newstat</I>() (slot <I>__NR_stat</I>), and <I>sys_stat64</I>() (slot
+          <I>__NR_stat64</I>), with the last being the most current.  A similar story
+          applies for <A HREF="../man2/lstat.2.html">lstat(2)</A> and <A HREF="../man2/fstat.2.html">fstat(2)</A>.
+
+       *  Similarly, the defines <I>__NR_oldolduname</I>, <I>__NR_olduname</I>, and <I>__NR_uname</I>
+          refer to the routines <I>sys_olduname</I>(), <I>sys_uname</I>() and <I>sys_newuname</I>().
+
+       *  In Linux 2.0, a new version of <A HREF="../man2/vm86.2.html">vm86(2)</A> appeared, with the old and the new
+          kernel routines being named <I>sys_vm86old</I>() and <I>sys_vm86</I>().
+
+       *  In Linux 2.4, a new version of <A HREF="../man2/getrlimit.2.html">getrlimit(2)</A> appeared, with the old and the
+          new kernel routines being named <I>sys_old_getrlimit</I>() (slot <I>__NR_getrlimit</I>)
+          and <I>sys_getrlimit</I>() (slot <I>__NR_ugetrlimit</I>).
+
+       *  Linux 2.4 increased the size of user and group IDs from 16 to 32 bits.  To
+          support this change, a range of system calls were added (e.g., <A HREF="../man2/chown32.2.html">chown32(2)</A>,
+          <A HREF="../man2/getuid32.2.html">getuid32(2)</A>, <A HREF="../man2/getgroups32.2.html">getgroups32(2)</A>, <A HREF="../man2/setresuid32.2.html">setresuid32(2)</A>), superseding earlier calls of
+          the same name without the "32" suffix.
+
+       *  Linux 2.4 added support for applications on 32-bit architectures to access
+          large files (i.e., files for which the sizes and file offsets can't be
+          represented in 32 bits.)  To support this change, replacements were
+          required for system calls that deal with file offsets and sizes.  Thus the
+          following system calls were added: <A HREF="../man2/fcntl64.2.html">fcntl64(2)</A>, <A HREF="../man2/ftruncate64.2.html">ftruncate64(2)</A>,
+          <A HREF="../man2/getdents64.2.html">getdents64(2)</A>, <A HREF="../man2/stat64.2.html">stat64(2)</A>, <A HREF="../man2/statfs64.2.html">statfs64(2)</A>, and their analogs that work with
+          file descriptors or symbolic links.  These system calls supersede the older
+          system calls which, except in the case of the "stat" calls, have the same
+          name without the "64" suffix.
+
+          On newer platforms that only have 64-bit file access and 32-bit uids (e.g.,
+          alpha, ia64, s390x) there are no *64 or *32 calls.  Where the *64 and *32
+          calls exist, the other versions are obsolete.
+
+       *  The <I>rt_sig*</I> calls were added in kernel 2.2 to support the addition of real-
+          time signals (see <A HREF="../man7/signal.7.html">signal(7)</A>).  These system calls supersede the older
+          system calls of the same name without the "rt_" prefix.
+
+       *  The <A HREF="../man2/select.2.html">select(2)</A> and <A HREF="../man2/mmap.2.html">mmap(2)</A> system calls use five or more arguments, which
+          caused problems the way argument passing on the i386 used to be set up.
+          Thus, while other architectures have <I>sys_select</I>() and <I>sys_mmap</I>()
+          corresponding to <I>__NR_select</I> and <I>__NR_mmap</I>, on i386 one finds <I>old_select</I>()
+          and <I>old_mmap</I>() (routines that use a pointer to a argument block) instead.
+          These days passing five arguments is not a problem any more, and there is a
+          <I>__NR__newselect</I> that corresponds directly to <I>sys_select</I>() and similarly
+          <I>__NR_mmap2</I>.
+</PRE>
+<a name="SEE_ALSO" href="#SEE_ALSO"></a><H2>SEE ALSO  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#section_dir"><font size="-2">top</font></a></H2><PRE>
+       <A HREF="../man2/syscall.2.html">syscall(2)</A>, <A HREF="../man2/unimplemented.2.html">unimplemented(2)</A>, <A HREF="../man7/libc.7.html">libc(7)</A>
+</PRE>
+<a name="COLOPHON" href="#COLOPHON"></a><H2>COLOPHON  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#section_dir"><font size="-2">top</font></a></H2><PRE>
+       This page is part of release 3.26 of the Linux <I>man-pages</I> project.  A
+       description of the project, and information about reporting bugs, can be found
+       at <a href="http://www.kernel.org/doc/man-pages/">http://www.kernel.org/doc/man-pages/</a>.
+
+Linux                                 2010-03-06                          SYSCALLS(2)
+</PRE>
+<HR>
+<p><font size="-1">HTML rendering created 2010-09-05 by Michael Kerrisk, author of <a href="http://man7.org/tlpi/"><em>The Linux Programming Interface</em></font></a>
+</PR>
+
+<!--BEGIN-STATCOUNTER-->
+<!-- Start of StatCounter Code -->
+<script type="text/javascript">
+var sc_project=5618989;
+var sc_invisible=1;
+var sc_partition=60;
+var sc_click_stat=1;
+var sc_security="4f8507d7";
+</script>
+
+<script type="text/javascript"
+src="http://www.statcounter.com/counter/counter.js"></script><noscript><div
+class="statcounter"><a title="customisable counter"
+href="http://www.statcounter.com/free_hit_counter.html"
+target="_blank"><img class="statcounter"
+src="http://c.statcounter.com/5618989/0/4f8507d7/1/" alt="customisable
+counter" ></a></div></noscript>
+<!-- End of StatCounter Code -->
+<!--END-STATCOUNTER-->
+
+</BODY>
+</HTML>
