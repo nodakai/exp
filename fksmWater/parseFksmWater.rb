@@ -16,7 +16,7 @@ ARGV.each { |f|
             when /^(\d+):(\d+)/
                 hour = $1.to_i
                 min = $2.to_i
-                minofday = hour * 24 + min
+                minofday = hour * 60 + min
                 times << line# minofday
             when /^(\d+)月(\d+)日/
                 month = $1.to_i
