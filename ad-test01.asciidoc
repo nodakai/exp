@@ -1,0 +1,27 @@
+= アスキードックのテスト =
+野田 開 <nodakai@gmail.com>
+Ver 0.1, 2011-05-01
+
+== 章 ==
+
+ほむ
+ほむ
+
+== コードブロック ==
+
+生のテキスト
+
+ #include <boost/functional.hpp>
+ #include <boost/shared_ptr.hpp>
+
+これでおｋ
+
+----
+#include <iostream>
+
+using namespace std;
+
+int main() {
+    cout << "はろー" << endl;
+}
+----
