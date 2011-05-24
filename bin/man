@@ -1,3 +1,0 @@
-#!/bin/sh
-PATH="/bin:/usr/bin"
-LANG=C man "$@"
