@@ -1,0 +1,9 @@
+Name:                abra
+Version:             0.1
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+Library
+  Build-depends:     base
+  Hs-source-dirs:    src
+  Exposed-modules:   Abr.Acad.Abra
