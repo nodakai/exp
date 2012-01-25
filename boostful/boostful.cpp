@@ -1,9 +1,11 @@
 #include <iostream>
 
 #include <boost/program_options.hpp>
+#include <boost/format.hpp>
 
 using namespace std;
-namespace po = boost::program_options;
+namespace b = boost;
+namespace po = b::program_options;
 
 int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
@@ -22,7 +24,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (vm.count("debug")) {
-        cout << "debug level == " << vm["debug"].as<int>() << endl;
+        cout << b::format("debug level == %1%") % vm["debug"].as<int>() << endl;
     }
 
     return 0;
