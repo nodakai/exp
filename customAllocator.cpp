@@ -1,14 +1,15 @@
 #include <iostream>
 #include <string>
+#include <memory>
 
 using namespace std;
+
+namespace nodakai {
 
 template <typename T>
 class MyAllocator : public std::allocator<T>
 {
 public:
-    typedef std::allocator<T> base_type;
-
     int *m_cnt;
 
     MyAllocator() : base_type(), m_cnt(new int) {
@@ -30,11 +31,47 @@ public:
     struct rebind { typedef MyAllocator<U> other; };
 };
 
-typedef basic_string<char, char_traits<char>, MyAllocator<char> > MyString;
+template <typename T>
+class MyStatefulAllocator : public std::allocator<T>
+{
+public:
+    int *m_cnt;
+
+    MyStatefulAllocator() : base_type(), m_cnt(NULL) {
+        cout << __PRETTY_FUNCTION__ << ": this == " << this << "; m_cnt == " << *m_cnt << endl;
+    }
+
+    MyStatefulAllocator(int *cnt) : base_type(), m_cnt(cnt) {
+        *m_cnt = 1;
+        cout << __PRETTY_FUNCTION__ << ": this == " << this << "; m_cnt == " << *m_cnt << endl;
+    }
+
+    MyStatefulAllocator(const MyStatefulAllocator &o) : base_type(o), m_cnt(o.m_cnt) {
+        *m_cnt += 1;
+        cout << __PRETTY_FUNCTION__ << ": this == " << this << "; m_cnt == " << *m_cnt << endl;
+    }
+
+    ~MyStatefulAllocator() {
+        *m_cnt -= 1;
+        cout << __PRETTY_FUNCTION__ << ": this == " << this << "; m_cnt == " << *m_cnt << endl;
+    }
+
+    template <typename U>
+    struct rebind { typedef MyStatefulAllocator<U> other; };
+
+    bool operator== (const MyStatefulAllocator &o) const {
+        return m_cnt == o.m_cnt;
+    }
+};
+
+} // namespace nodakai
+
+typedef basic_string<char, char_traits<char>, nodakai::MyStatefulAllocator<char> > MyString;
 
 int main(int argc, char *argv[])
 {
-    MyAllocator<char> alloc;
+    auto_ptr<int> pCnt(new int);
+    nodakai::MyStatefulAllocator<char> alloc(pCnt.get());
     {
         MyString foo("abc", alloc);
     }

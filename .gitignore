@@ -3,3 +3,12 @@
 *.hi
 
 statefulAllocator
+customAllocator
+
+onePast
+
+valgrindDoubleFree
+valgrindRealloc
+valgrindStrlen
+
+labltk_space
