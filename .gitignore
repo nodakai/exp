@@ -12,3 +12,5 @@ valgrindRealloc
 valgrindStrlen
 
 labltk_space
+
+arrDump
