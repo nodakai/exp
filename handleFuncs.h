@@ -18,7 +18,7 @@ private:
     void *m_p;
 
 public:
-    explicit handle(void *p) : m_p(p) { }
+    handle(void *p) : m_p(p) { }
 
     template<typename U>
     const U *ptr() const { return reinterpret_cast<U*>(m_p); }

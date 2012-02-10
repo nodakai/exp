@@ -15,11 +15,15 @@ int main(int argc, char *argv[]) {
     }
     const clock_t t1 = clock();
     for (int i = 0; i < N; ++i) {
-        b::handle<b::x> hdl(argv[0]);
+        b::handle<b::x> hdl = argv[0];
         b::foo(hdl);
 
-        // b::handle<b::y> hdl1(argv[0]);
+        // b::handle<b::y> hdl1 = argv[0];
         // hdl1 = hdl;
+
+        // b::handle<a::handle> hdl1 = argv[0];
+        // b::handle<a::handle1> hdl2 = argv[0];
+        // hdl1 = hdl2;
     }
     const clock_t t2 = clock();
 
