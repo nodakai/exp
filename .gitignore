@@ -21,6 +21,7 @@ tmInit
 handle
 mcLiteral
 passTemp
+typeid
 
 # tests how C++11 works
 arraySort
