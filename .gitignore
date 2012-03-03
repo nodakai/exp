@@ -27,3 +27,4 @@ arraySort
 
 # x86 benchmark
 busTraffic
+cacheMiss
