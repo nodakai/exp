@@ -15,7 +15,7 @@ labltk_space
 
 # utilities
 arrDump
-read
+directRead
 
 # tests on how C/C++ works
 tmInit
