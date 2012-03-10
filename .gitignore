@@ -13,17 +13,18 @@ valgrindStrlen
 
 labltk_space
 
-# utility
+# utilities
 arrDump
+read
 
-# tests how C/C++ works
+# tests on how C/C++ works
 tmInit
 handle
 mcLiteral
 passTemp
 typeid
 
-# tests how C++11 works
+# tests on how C++11 works
 arraySort
 
 # x86 benchmark
