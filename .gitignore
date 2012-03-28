@@ -27,6 +27,7 @@ eipPeek
 eipPeek.S
 empty
 empty.S
+tbbAtomic
 
 # tests on how C++11 works
 arraySort
