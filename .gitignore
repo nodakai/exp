@@ -28,6 +28,7 @@ eipPeek.S
 empty
 empty.S
 tbbAtomic
+noNameHierarchy
 
 # tests on how C++11 works
 arraySort
