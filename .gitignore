@@ -16,8 +16,6 @@ labltk_space
 # utilities
 arrDump
 directRead
-eipPeek
-eipPeek.S
 
 # tests on how C/C++ works
 tmInit
@@ -25,6 +23,10 @@ handle
 mcLiteral
 passTemp
 typeid
+eipPeek
+eipPeek.S
+empty
+empty.S
 
 # tests on how C++11 works
 arraySort
