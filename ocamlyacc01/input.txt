@@ -1,0 +1,3 @@
+let foo = '0x10'
+let bar = '0x20'
+let baz = (foo | bar)
