@@ -16,6 +16,8 @@ labltk_space
 # utilities
 arrDump
 directRead
+eipPeek
+eipPeek.S
 
 # tests on how C/C++ works
 tmInit
