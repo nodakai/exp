@@ -29,6 +29,8 @@ empty
 empty.S
 tbbAtomic
 noNameHierarchy
+mallocLen
+autolk
 
 # tests on how C++11 works
 arraySort
