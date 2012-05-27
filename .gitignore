@@ -32,6 +32,7 @@ tbbAtomic
 noNameHierarchy
 mallocLen
 autolk
+gettimeofday
 
 # tests on how C++11 works
 arraySort
