@@ -35,6 +35,8 @@ mallocLen
 autolk
 gettimeofday
 gettimeofday.S
+gettimeofdaySpin
+gettimeofdaySpin.S
 multimap
 procSelfMaps
 writeAsm
