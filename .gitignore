@@ -35,6 +35,7 @@ autolk
 gettimeofday
 multimap
 procSelfMaps
+writeAsm
 
 # tests on how C++11 works
 arraySort
