@@ -34,6 +34,7 @@ mallocLen
 autolk
 gettimeofday
 multimap
+procSelfMaps
 
 # tests on how C++11 works
 arraySort
