@@ -28,11 +28,13 @@ eipPeek
 eipPeek.S
 empty
 empty.S
+empty.objdump
 tbbAtomic
 noNameHierarchy
 mallocLen
 autolk
 gettimeofday
+gettimeofday.S
 multimap
 procSelfMaps
 writeAsm
@@ -40,6 +42,7 @@ onlyStart
 onlyStart.S
 onlyStart1
 empty_inet_aton
+seeMtime
 
 # tests on how C++11 works
 arraySort
