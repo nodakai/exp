@@ -36,6 +36,8 @@ gettimeofday
 multimap
 procSelfMaps
 writeAsm
+onlyStart
+onlyStart.S
 
 # tests on how C++11 works
 arraySort
