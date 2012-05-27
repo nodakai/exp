@@ -39,6 +39,7 @@ writeAsm
 onlyStart
 onlyStart.S
 onlyStart1
+empty_inet_aton
 
 # tests on how C++11 works
 arraySort
