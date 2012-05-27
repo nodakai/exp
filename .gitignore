@@ -33,6 +33,7 @@ noNameHierarchy
 mallocLen
 autolk
 gettimeofday
+multimap
 
 # tests on how C++11 works
 arraySort
