@@ -38,6 +38,7 @@ procSelfMaps
 writeAsm
 onlyStart
 onlyStart.S
+onlyStart1
 
 # tests on how C++11 works
 arraySort
