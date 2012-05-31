@@ -26,6 +26,8 @@ passTemp
 typeid
 peekEip
 peekEip.S
+peekEsp
+peekEsp.S
 empty
 empty.S
 empty.objdump
