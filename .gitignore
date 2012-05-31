@@ -24,8 +24,8 @@ handle
 mcLiteral
 passTemp
 typeid
-eipPeek
-eipPeek.S
+peekEip
+peekEip.S
 empty
 empty.S
 empty.objdump
