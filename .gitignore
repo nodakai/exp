@@ -51,6 +51,7 @@ log4cxxConfigurator
 overloadVsFlag
 ioctlGetMac
 sockoptRecvbuf
+strAssign
 
 # tests on how C++11 works
 arraySort
