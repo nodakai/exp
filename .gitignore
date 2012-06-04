@@ -48,6 +48,7 @@ onlyStart1
 empty_inet_aton
 seeMtime
 log4cxxConfigurator
+overloadVsFlag
 
 # tests on how C++11 works
 arraySort
