@@ -52,6 +52,7 @@ overloadVsFlag
 ioctlGetMac
 sockoptRecvbuf
 strAssign
+testGetopt
 
 # tests on how C++11 works
 arraySort
