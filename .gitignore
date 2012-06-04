@@ -49,6 +49,7 @@ empty_inet_aton
 seeMtime
 log4cxxConfigurator
 overloadVsFlag
+ioctlGetMac
 
 # tests on how C++11 works
 arraySort
