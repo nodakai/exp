@@ -17,6 +17,7 @@ labltk_space
 arrDump
 directRead
 argv0
+autolk
 
 # tests on how C/C++ works
 tmInit
@@ -31,29 +32,26 @@ peekEsp.S
 empty
 empty.S
 empty.objdump
-tbbAtomic
 noNameHierarchy
-mallocLen
-autolk
-gettimeofday
-gettimeofday.S
-gettimeofdaySpin
-gettimeofdaySpin.S
-multimap
-procSelfMaps
 writeAsm
 onlyStart
 onlyStart.S
 onlyStart1
+overloadVsFlag
+multimap
+procSelfMaps
+strAssign
+
+# API samples
+tbbAtomic
 empty_inet_aton
 seeMtime
 log4cxxConfigurator
-overloadVsFlag
 ioctlGetMac
 sockoptRecvbuf
-strAssign
 testGetopt
 testGetaddrinfo
+posixTime
 
 # tests on how C++11 works
 arraySort
@@ -61,3 +59,7 @@ arraySort
 # x86 benchmark
 busTraffic
 cacheMiss
+gettimeofday
+gettimeofday.S
+gettimeofdaySpin
+gettimeofdaySpin.S
