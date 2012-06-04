@@ -53,6 +53,7 @@ ioctlGetMac
 sockoptRecvbuf
 strAssign
 testGetopt
+testGetaddrinfo
 
 # tests on how C++11 works
 arraySort
