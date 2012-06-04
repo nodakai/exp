@@ -50,6 +50,7 @@ seeMtime
 log4cxxConfigurator
 overloadVsFlag
 ioctlGetMac
+sockoptRecvbuf
 
 # tests on how C++11 works
 arraySort
