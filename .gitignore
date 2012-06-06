@@ -41,6 +41,7 @@ overloadVsFlag
 multimap
 procSelfMaps
 strAssign
+macAddrLeBe
 
 # API samples
 tbbAtomic
