@@ -53,6 +53,7 @@ sockoptRecvbuf
 testGetopt
 testGetaddrinfo
 posixTime
+setGetAffinity
 
 # tests on how C++11 works
 arraySort
