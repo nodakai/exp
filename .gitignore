@@ -55,6 +55,7 @@ testGetaddrinfo
 posixTime
 setGetAffinity
 pollUspaceOverhead
+ipcPingPong
 
 # tests on how C++11 works
 arraySort
