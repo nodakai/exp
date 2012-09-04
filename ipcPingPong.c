@@ -54,6 +54,25 @@ struct Message {
 const char g_host[] = "localhost";
 const char g_port[] = "32301";
 
+static void setSockOpts(int serverSock)
+{
+    int opt;
+    struct linger l = { 0 };
+
+    opt = 1;
+    if (-1 == setsockopt(serverSock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt)) {
+        perror("setsockopt(2)");
+        exit(47);
+    }
+
+    l.l_onoff = 1;
+    l.l_linger = 0;
+    if (-1 == setsockopt(serverSock, SOL_SOCKET, SO_LINGER, &l, sizeof l)) {
+        perror("setsockopt(2)");
+        exit(48);
+    }
+}
+
 static void testSocketInetDgramServer(int nRep)
 {
     int serverSock;
@@ -72,6 +91,7 @@ static void testSocketInetDgramServer(int nRep)
         perror("socket(2)");
         exit(29);
     }
+    setSockOpts(serverSock);
     if (-1 == bind(serverSock, res->ai_addr, res->ai_addrlen)) {
         perror("bind(2)");
         exit(34);
@@ -82,8 +102,8 @@ static void testSocketInetDgramServer(int nRep)
         int ri;
         struct sockaddr_storage ss = { 0 };
         socklen_t len = sizeof ss, dlen = sizeof ri;
-        if (dlen > recvfrom(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, &len)) break;
-        if (dlen > sendto(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, len)) break;
+        if (recvfrom(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, &len) < dlen) break;
+        if (sendto(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, len) < dlen) break;
     }
     if (i != nRep)
         fprintf(stderr, "i==%d vs %d==nRep\n", i, nRep);
@@ -113,6 +133,7 @@ static void testSocketInetStreamServer(int nRep)
         perror("socket(2)");
         exit(42);
     }
+    setSockOpts(serverSock);
     if (-1 == bind(serverSock, res->ai_addr, res->ai_addrlen)) {
         perror("bind(2)");
         exit(43);
@@ -207,7 +228,8 @@ static void testSocketInetClient(int nRep, int socktype)
     testClientBody(sock, nRep);
 }
 
-const char g_unixSockPath[] = "/tmp/ipcPingPong-UnixDomainSock";
+const char g_unixServerSockPath[] = "/tmp/ipcPingPong-UnixDomainServerSock";
+const char g_unixClientSockPath[] = "/tmp/ipcPingPong-UnixDomainClietnSock";
 
 static void testSocketUnixDgramServer(int nRep)
 {
@@ -220,8 +242,8 @@ static void testSocketUnixDgramServer(int nRep)
         exit(30);
     }
     sun.sun_family = AF_UNIX;
-    strcpy(sun.sun_path, g_unixSockPath);
-    unlink(g_unixSockPath);
+    strcpy(sun.sun_path, g_unixServerSockPath);
+    unlink(g_unixServerSockPath);
     if (-1 == bind(serverSock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("bind(2)");
         exit(31);
@@ -232,8 +254,8 @@ static void testSocketUnixDgramServer(int nRep)
         int ri;
         struct sockaddr_storage ss = { 0 };
         socklen_t len = sizeof ss, dlen = sizeof ri;
-        if (dlen > recvfrom(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, &len)) break;
-        if (dlen > sendto(serverSock, &ri, dlen, 0, (const struct sockaddr *)&ss, len)) break;
+        if (recvfrom(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, &len) < dlen) break;
+        if (sendto(serverSock, &ri, dlen, 0, (const struct sockaddr *)&ss, len) < dlen) break;
     }
 
     printf("Done.\nQuitting...\n");
@@ -254,8 +276,8 @@ static void testSocketUnixStreamServer(int nRep)
         exit(30);
     }
     sun.sun_family = AF_UNIX;
-    strcpy(sun.sun_path, g_unixSockPath);
-    unlink(g_unixSockPath);
+    strcpy(sun.sun_path, g_unixServerSockPath);
+    unlink(g_unixServerSockPath);
     if (-1 == bind(serverSock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("bind(2)");
         exit(31);
@@ -296,9 +318,15 @@ static void testSocketUnixClient(int nRep, int socktype)
         perror("socket(AF_UNIX)");
         exit(32);
     }
-
     sun.sun_family = AF_UNIX;
-    strcpy(sun.sun_path, g_unixSockPath);
+    strcpy(sun.sun_path, g_unixClientSockPath);
+    unlink(g_unixClientSockPath);
+    if (-1 == bind(sock, (const struct sockaddr *)&sun, sizeof sun)) {
+        perror("connect(2)");
+        exit(45);
+    }
+
+    strcpy(sun.sun_path, g_unixServerSockPath);
     if (-1 == connect(sock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("connect(2)");
         exit(33);
