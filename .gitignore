@@ -42,6 +42,7 @@ multimap
 procSelfMaps
 strAssign
 macAddrLeBe
+compareStl
 
 # API samples
 tbbAtomic
