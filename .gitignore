@@ -57,6 +57,7 @@ posixTime
 setGetAffinity
 pollUspaceOverhead
 ipcPingPong
+sigOpsTwice
 
 # tests on how C++11 works
 arraySort
