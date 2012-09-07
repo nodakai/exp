@@ -43,6 +43,8 @@ procSelfMaps
 strAssign
 macAddrLeBe
 compareStl
+scopeExitPrettyFun
+scopeExitPrettyFun.S
 
 # API samples
 tbbAtomic
