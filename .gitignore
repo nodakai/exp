@@ -63,6 +63,7 @@ sigOpsTwice
 
 # tests on how C++11 works
 arraySort
+detachThread
 
 # x86 benchmark
 busTraffic
