@@ -60,6 +60,7 @@ setGetAffinity
 pollUspaceOverhead
 ipcPingPong
 sigOpsTwice
+isMulticast
 
 # tests on how C++11 works
 arraySort
