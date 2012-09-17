@@ -18,6 +18,7 @@ arrDump
 directRead
 argv0
 autolk
+arrayMap
 
 # tests on how C/C++ works
 tmInit
