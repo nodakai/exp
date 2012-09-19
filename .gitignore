@@ -46,6 +46,7 @@ macAddrLeBe
 compareStl
 scopeExitPrettyFun
 scopeExitPrettyFun.S
+emptyScanf
 
 # API samples
 tbbAtomic
