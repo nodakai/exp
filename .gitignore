@@ -76,3 +76,5 @@ gettimeofday
 gettimeofday.S
 gettimeofdaySpin
 gettimeofdaySpin.S
+atoiPerf
+atoiPerf.S
