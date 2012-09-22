@@ -47,6 +47,7 @@ compareStl
 scopeExitPrettyFun
 scopeExitPrettyFun.S
 emptyScanf
+vecIter
 
 # API samples
 tbbAtomic
