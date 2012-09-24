@@ -64,6 +64,7 @@ pollUspaceOverhead
 ipcPingPong
 sigOpsTwice
 isMulticast
+getoptMulti
 
 # tests on how C++11 works
 arraySort
