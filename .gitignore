@@ -82,3 +82,5 @@ gettimeofdaySpin
 gettimeofdaySpin.S
 atoiPerf
 atoiPerf.S
+vecScanPerf
+vecScanPerf.S
