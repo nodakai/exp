@@ -50,6 +50,7 @@ emptyScanf
 vecIter
 valueInit
 ossIss
+ptrCastAdv
 
 # API samples
 tbbAtomic
