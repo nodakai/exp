@@ -73,6 +73,7 @@ ipcPingPong
 sigOpsTwice
 isMulticast
 getoptMulti
+ampm
 
 # tests on how C++11 works
 arraySort
