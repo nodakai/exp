@@ -21,6 +21,7 @@ autolk
 arrayMap
 settimeofday
 mcListener
+tcpSender
 
 # tests on how C/C++ works
 tmInit
