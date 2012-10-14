@@ -71,6 +71,7 @@ getoptMulti
 # tests on how C++11 works
 arraySort
 detachThread
+map2ptr
 
 # x86 benchmark
 busTraffic
