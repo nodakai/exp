@@ -22,6 +22,7 @@ arrayMap
 settimeofday
 mcListener
 tcpSender
+mcSender
 
 # tests on how C/C++ works
 tmInit
