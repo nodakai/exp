@@ -19,6 +19,7 @@ directRead
 argv0
 autolk
 arrayMap
+settimeofday
 
 # tests on how C/C++ works
 tmInit
