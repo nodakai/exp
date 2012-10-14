@@ -23,6 +23,7 @@ settimeofday
 mcListener
 tcpSender
 mcSender
+udpSender
 
 # tests on how C/C++ works
 tmInit
