@@ -49,6 +49,7 @@ scopeExitPrettyFun.S
 emptyScanf
 vecIter
 valueInit
+ossIss
 
 # API samples
 tbbAtomic
