@@ -48,6 +48,7 @@ scopeExitPrettyFun
 scopeExitPrettyFun.S
 emptyScanf
 vecIter
+valueInit
 
 # API samples
 tbbAtomic
