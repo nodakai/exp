@@ -57,6 +57,7 @@ valueInit
 ossIss
 ptrCastAdv
 boolDefVal
+sizeofBool
 
 # API samples
 tbbAtomic
