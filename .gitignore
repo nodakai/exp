@@ -20,6 +20,7 @@ argv0
 autolk
 arrayMap
 settimeofday
+mcListener
 
 # tests on how C/C++ works
 tmInit
