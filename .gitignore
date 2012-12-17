@@ -121,3 +121,4 @@ vecScanPerf
 vecScanPerf.S
 ofstreamPerf
 ctxSwBench
+cpuLocalCounters
