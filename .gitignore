@@ -106,6 +106,7 @@ detachThread
 map2ptr
 enumClass
 threadSubst
+chrono
 
 # x86 benchmark
 busTraffic
