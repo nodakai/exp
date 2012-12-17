@@ -29,6 +29,7 @@ mcSender
 udpSender
 subpcap
 settimeofday
+maxMalloc
 
 # tests on how C/C++ works
 tmInit
