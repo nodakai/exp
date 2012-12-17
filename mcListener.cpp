@@ -6,7 +6,6 @@
 
 #include <cstdlib>
 #include <cstdio> // perror
-#include <climits> // LONG_MIN
 
 #include <sys/types.h> // socket
 #include <sys/socket.h> // socket
@@ -44,13 +43,13 @@ static void sigIntHandler(int) {
     g_running = false;
     const char msg[] = "Caught SIGINT;  Set g_running = false;\n";
     auto ign = ::write(STDOUT_FILENO, msg, sizeof msg - 1);
-    ign = ign; // just to suppress a warning
+    (void)ign;
 }
 
 static int setupSocket(const char *mcAddr, const char *mcPort)
 {
     const int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (-1 == sock)
+    if (RC_NG == sock)
         myPrror("socket(2)");
 
     ::sockaddr_in sin = { };
@@ -72,7 +71,7 @@ static int setupSocket(const char *mcAddr, const char *mcPort)
         sin.sin_port = htons(intPort);
     }
     if (1 != ::inet_pton(AF_INET, mcAddr, &sin.sin_addr))
-        throw std::invalid_argument(string("Invalid address == [") + "0.0.0.0" + "]");
+        throw std::invalid_argument(string("Invalid address == [") + mcAddr + "]");
     if (RC_NG == ::bind(sock, reinterpret_cast<const ::sockaddr *>(&sin), sizeof sin))
         myPrror("bind(2)");
 
@@ -117,7 +116,7 @@ static void printUsage() {
 
 int main(int argc, char *argv[])
 {
-    long nMsg = LONG_MIN;
+    long nMsg = -1;
     PrintMode mode = PRINT_FULL;
 
     char optchr;
@@ -167,9 +166,9 @@ int main(int argc, char *argv[])
     }
 
     int cnt = 0;
-    while (g_running && (nMsg == LONG_MIN || cnt < nMsg)) {
+    while (g_running && (0 > nMsg || cnt < nMsg++)) {
         ::epoll_event events[MAX_EVENTS];
-        const int nEvts = ::epoll_wait(epFd, events, MAX_EVENTS, 1000 /* milliseconds */ );
+        const int nEvts = ::epoll_wait(epFd, events, MAX_EVENTS, -1 ); // no time out
         if (RC_NG == nEvts) {
             const int eno = errno;
             if (EAGAIN == eno || EINTR == eno)
@@ -179,7 +178,7 @@ int main(int argc, char *argv[])
         }
         for (int ei = 0; ei < nEvts; ++ei, ++cnt) {
             char buf[BUFLEN];
-            const auto nRecv = ::recv(events[ei].data.fd, buf, BUFLEN, 0);
+            const auto nRecv = ::recv(events[ei].data.fd, buf, (PRINT_FULL == mode ? BUFLEN : 0), 0);
             if (0 > nRecv)
                 myPrror("recv(2)");
 
@@ -188,16 +187,25 @@ int main(int argc, char *argv[])
                 for (i = 0; i < nRecv; ++i) {
                     if (0 == i % 16)
                         cout << std::hex << std::setw(6) << std::setfill('0') << i << std::dec << " [" ;
-                    cout << buf[i];
+                    const auto c = buf[i];
+                    if (0x11 == c)
+                        cout << '#' ;
+                    else if (0x12 == c)
+                        cout << '$' ;
+                    else if (0x13 == c)
+                        cout << '@' ;
+                    else if ( ! ::isprint(c))
+                        cout << '.' ;
+                    else
+                        cout << c ;
                     if (0 == (i+1) % 16)
-                        cout << "]" << endl;
+                        cout << ']' << endl;
                     // else if (0 == (i+1) % 8) cout << ' ';
                 }
-                if (0 != i % 16) cout << "]" << endl;
-            } else if (PRINT_DOT == mode) {
-                ::putchar('.');
-                fflush(stdout);
-            }
+                if (0 != i % 16)
+                    cout << ']' << endl;
+            } else if (PRINT_DOT == mode)
+                cout << '.' << std::flush;
         }
     }
 
