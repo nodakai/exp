@@ -64,6 +64,7 @@ sizeofBool
 unorderedMapAlloc
 tmplFnDfltImpl
 getlineWoNewline
+stdFill
 
 # API samples
 tbbAtomic
