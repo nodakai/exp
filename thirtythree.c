@@ -1,25 +1,24 @@
+#define __USE_XOPEN
 #include <stdio.h>
+#include <stdint.h>
+#include <float.h>
 
-typedef enum { FALSE, TRUE, } BOOL;
+typedef uint8_t Byte;
 
-typedef enum { PLUS, MINUS, } sign;
-
-typedef unsigned char Byte;
-
-#define INTparBYTE (sizeof(int)/sizeof(Byte))
-#define UINTparBYTE (sizeof(unsigned int)/sizeof(Byte))
-#define DOUBLEparBYTE (sizeof(double)/sizeof(Byte))
-#define FLOATparBYTE (sizeof(float)/sizeof(Byte))
+#define INTperBYTE (sizeof(int)/sizeof(Byte))
+#define UINTperBYTE (sizeof(unsigned int)/sizeof(Byte))
+#define DOUBLEperBYTE (sizeof(double)/sizeof(Byte))
+#define FLOATperBYTE (sizeof(float)/sizeof(Byte))
 
 /*
 typedef union {
     int intval;
-    Byte peek[INTparBYTE];
+    Byte peek[INTperBYTE];
 } intlook;
 
 typedef union {
     float floatval;
-    Byte peek[FLOATparBYTE];
+    Byte peek[FLOATperBYTE];
 } floatlook;
 */
 
@@ -30,7 +29,7 @@ binprint_int(intlook *ptr)
     printf("%12d  =  ", ptr->theint);
 
     int i;
-    for (i = 8 * INTparBYTE - 1; i >= 0; --i)
+    for (i = 8 * INTperBYTE - 1; i >= 0; --i)
     {
         printf("%d", (ptr->peek[i / 8] >> (i % 8)) & 0x1);
 
@@ -51,7 +50,7 @@ binprint_int(int theint)
 
     printf("%12d  =  ", theint);
 
-    for (i = 8 * INTparBYTE - 1; i >= 0; --i)
+    for (i = 8 * INTperBYTE - 1; i >= 0; --i)
     {
         printf("%d", (peek[i/8] >> (i%8)) & 0x01);
 
@@ -72,7 +71,7 @@ binprint_uint(uintlook *ptr)
     printf("%12u  =  ", ptr->utheint);
 
     int i;
-    for (i = 8 * UINTparBYTE - 1; i >= 0; --i)
+    for (i = 8 * UINTperBYTE - 1; i >= 0; --i)
     {
         printf("%d", (ptr->peek[i / 8] >> (i % 8)) & 0x1);
 
@@ -90,7 +89,7 @@ void
 binprint_float(floatlook *ptr)
 {
     int i;
-    for (i = 8 * FLOATparBYTE - 1; i >= 0; --i)
+    for (i = 8 * FLOATperBYTE - 1; i >= 0; --i)
     {
         printf("%d", (ptr->peek[i / 8] >> (i % 8)) & 0x1);
 
@@ -98,7 +97,7 @@ binprint_float(floatlook *ptr)
         {
             putchar(' ');
         }
-        else if (FLOATparBYTE * 8 - i == 1 || FLOATparBYTE * 8 - i == 9)
+        else if (FLOATperBYTE * 8 - i == 1 || FLOATperBYTE * 8 - i == 9)
         {
             printf("   ");
         }
@@ -116,7 +115,7 @@ binprint_float(float thefloat)
 
     printf("%88.47f  =  ", thefloat);
 
-    for (i = 8 * FLOATparBYTE - 1; i >= 0; --i)
+    for (i = 8 * FLOATperBYTE - 1; i >= 0; --i)
     {
         printf("%d", (peek[i/8] >> (i%8)) & 0x1);
 
@@ -124,7 +123,7 @@ binprint_float(float thefloat)
         {
             putchar(' ');
         }
-        else if (FLOATparBYTE * 8 - i == 1 || FLOATparBYTE * 8 - i == 9)
+        else if (FLOATperBYTE * 8 - i == 1 || FLOATperBYTE * 8 - i == 9)
         {
             printf("   ");
         }
@@ -136,7 +135,7 @@ binprint_float(float thefloat)
 binprint_float_wide(floatlook *ptr, int width, int dec)
 {
     int i;
-    for (i = 8 * FLOATparBYTE - 1; i >= 0; --i)
+    for (i = 8 * FLOATperBYTE - 1; i >= 0; --i)
     {
         printf("%d", (ptr->peek[i / 8] >> (i % 8)) & 0x1);
 
@@ -144,7 +143,7 @@ binprint_float_wide(floatlook *ptr, int width, int dec)
         {
             putchar(' ');
         }
-        else if (FLOATparBYTE * 8 - i == 1 || FLOATparBYTE * 8 - i == 9)
+        else if (FLOATperBYTE * 8 - i == 1 || FLOATperBYTE * 8 - i == 9)
         {
             printf("   ");
         }
@@ -155,13 +154,9 @@ binprint_float_wide(floatlook *ptr, int width, int dec)
     printf(fmt, ptr->floatval);
 } */
 
-int
-main(void)
+void test_int(void)
 {
     int i, theint;
-    float thefloat;
-    Byte peek[4];
-
     theint = 0x1;
     binprint_int(theint);
 
@@ -197,9 +192,13 @@ main(void)
         theint = (unsigned int)theint >> 1;
         binprint_int(theint);
     }
+}
 
-    putchar('\n');
-    putchar('\n');
+void test_float()
+{
+    int i;
+    float thefloat;
+    Byte peek[4];
 
     thefloat = 2.0;
     binprint_float(thefloat);
@@ -257,7 +256,7 @@ main(void)
     peek[2] = 0xff;
     peek[1] = 0xff;
     peek[0] = 0xff;
-    /* memcpy(&thefloat, &peek, FLOATparBYTE); */
+    /* memcpy(&thefloat, &peek, FLOATperBYTE); */
     binprint_float(*((float *)peek));
 
     peek[3] = 0x00;
@@ -351,6 +350,61 @@ main(void)
     peek[1] = 0xff;
     peek[0] = 0xff;
     binprint_float(*((float *)peek));
+}
+
+void binprint_double(double thedouble)
+{
+    int i, j;
+    union {
+        double d;
+        Byte b[DOUBLEperBYTE];
+    } u;
+
+    u.d = thedouble;
+
+    for (i = 0; i < DOUBLEperBYTE; ++i) {
+        for (j = 0; j < 8; ++j)
+            printf("%d", (u.b[DOUBLEperBYTE - 1 - i] >> (7 - j)) & 0x01);
+        putchar(' ');
+    }
+    putchar('\n');
+}
+
+void test_float01()
+{
+    int i;
+
+    binprint_double(1);
+    binprint_double(2);
+    binprint_double(4);
+    binprint_double(10);
+
+    binprint_double(0.1);
+
+    binprint_double(DBL_MAX);
+    binprint_double(-DBL_MAX);
+
+    binprint_double(DBL_EPSILON);
+
+    binprint_double(1.0 + DBL_EPSILON);
+
+    putchar('\n');
+
+    const double onetenth = 0.1;
+    for (i = 0; i <= 10; ++i) {
+        volatile double a = i * onetenth;
+        volatile double b = 10 * a;
+        printf("%f %s %f\n", b, (b == i ? "==" : "!="), (double)i);
+    }
+
+}
+
+int main(void)
+{
+    /* puts("test_int()\n"); test_int(); */
+
+    /* puts("test_float()\n"); test_float(); */
+    test_float01();
 
     return 0;
 }
