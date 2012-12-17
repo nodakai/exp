@@ -62,6 +62,7 @@ ptrCastAdv
 boolDefVal
 sizeofBool
 unorderedMapAlloc
+tmplFnDfltImpl
 
 # API samples
 tbbAtomic
