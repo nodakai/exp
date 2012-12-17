@@ -85,6 +85,7 @@ ncurses
 arraySort
 detachThread
 map2ptr
+enumClass
 
 # x86 benchmark
 busTraffic
