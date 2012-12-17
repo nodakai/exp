@@ -68,6 +68,8 @@ tmplFnDfltImpl
 getlineWoNewline
 stdFill
 thirtythree
+syscallWrapper
+syscallWrapper.S
 
 # API samples
 tbbAtomic
