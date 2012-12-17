@@ -97,6 +97,7 @@ tcpRel
 fsync
 fallocate
 myThreadId
+sleep
 
 # tests on how C++11 works
 arraySort
