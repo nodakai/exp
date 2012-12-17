@@ -100,6 +100,7 @@ myThreadId
 sleep
 memmovePerf
 cvPingPong
+shmIpcBench
 
 # tests on how C++11 works
 arraySort
