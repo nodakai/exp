@@ -58,6 +58,7 @@ ossIss
 ptrCastAdv
 boolDefVal
 sizeofBool
+unorderedMapAlloc
 
 # API samples
 tbbAtomic
