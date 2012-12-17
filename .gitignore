@@ -79,6 +79,7 @@ getoptMulti
 ampm
 maxOpenedFiles
 fdFstream
+ncurses
 
 # tests on how C++11 works
 arraySort
