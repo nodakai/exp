@@ -77,6 +77,7 @@ isMulticast
 getoptMulti
 ampm
 maxOpenedFiles
+fdFstream
 
 # tests on how C++11 works
 arraySort
