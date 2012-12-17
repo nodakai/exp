@@ -96,6 +96,7 @@ ncurses
 tcpRel
 fsync
 fallocate
+myThreadId
 
 # tests on how C++11 works
 arraySort
