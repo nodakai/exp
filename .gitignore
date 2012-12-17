@@ -63,6 +63,7 @@ boolDefVal
 sizeofBool
 unorderedMapAlloc
 tmplFnDfltImpl
+getlineWoNewline
 
 # API samples
 tbbAtomic
