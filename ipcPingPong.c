@@ -8,6 +8,7 @@
 #include <sys/un.h> /* sockaddr_un */
 #include <unistd.h> /* close, unlink */
 #include <getopt.h> /* getopt */
+#include <errno.h>
 
 #define BUFLEN 1024
 char g_errbuf[BUFLEN];
@@ -73,10 +74,31 @@ static void setSockOpts(int serverSock)
     }
 }
 
+static void doDgramServerLoop(int serverSock, int nRep)
+{
+    int i;
+    char buf[200];
+    for (i = 0; i < nRep; ++i) {
+        struct sockaddr_storage ss;
+        socklen_t len = sizeof ss;
+        ssize_t buflen = sizeof buf;
+        while (0 >= recvfrom(serverSock, buf, buflen, MSG_DONTWAIT, (struct sockaddr *)&ss, &len)) {
+            if (EAGAIN != errno)
+                goto err;
+        }
+        if (sendto(serverSock, buf, buflen, 0, (const struct sockaddr *)&ss, len) < buflen)
+            goto err;
+    }
+    return;
+
+err:
+    fprintf(stderr, "i==%d vs %d==nRep\n", i, nRep);
+}
+
 static void testSocketInetDgramServer(int nRep)
 {
     int serverSock;
-    int i, rc;
+    int rc;
     struct addrinfo hints = { 0 }, *res;
 
     printf("Starting the INET DGRAM socket server...  ");
@@ -98,15 +120,8 @@ static void testSocketInetDgramServer(int nRep)
     }
     printf("Done.\nBenchmarking...  ");
 
-    for (i = 0; i < nRep; ++i) {
-        int ri;
-        struct sockaddr_storage ss = { 0 };
-        socklen_t len = sizeof ss, dlen = sizeof ri;
-        if (recvfrom(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, &len) < dlen) break;
-        if (sendto(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, len) < dlen) break;
-    }
-    if (i != nRep)
-        fprintf(stderr, "i==%d vs %d==nRep\n", i, nRep);
+    doDgramServerLoop(serverSock, nRep);
+
 
     printf("Done.\nQuitting...\n");
     if (-1 == close(serverSock)) {
@@ -115,9 +130,26 @@ static void testSocketInetDgramServer(int nRep)
     }
 }
 
+static void doServerLoop(int connSock, int nRep) {
+    int i;
+    char buf[200];
+    for (i = 0; i < nRep; ++i) {
+        while (0 >= recv(connSock, buf, sizeof buf, MSG_DONTWAIT)) {
+            if (EAGAIN != errno)
+                goto err;
+        }
+        if (sizeof buf != send(connSock, buf, sizeof buf, 0))
+            goto err;
+    }
+    return;
+
+err:
+    fprintf(stderr, "i==%d vs %d==nRep", i, nRep);
+}
+
 static void testSocketInetStreamServer(int nRep)
 {
-    int i, rc;
+    int rc;
     int serverSock, connSock;
     struct addrinfo hints = { 0 }, *res;
 
@@ -149,13 +181,7 @@ static void testSocketInetStreamServer(int nRep)
     }
     printf("Connected.\nBenchmarking...  ");
 
-    for (i = 0; i < nRep; ++i) {
-        int ri;
-        if (0 >= recv(connSock, &ri, sizeof ri, 0)) break;
-        if (0 >= send(connSock, &ri, sizeof ri, 0)) break;
-    }
-    if (i != nRep)
-        fprintf(stderr, "i==%d vs %d==nRep\n", i, nRep);
+    doServerLoop(connSock, nRep);
 
     printf("Done.\nQuitting...\n");
     if (-1 == close(connSock)) {
@@ -176,34 +202,50 @@ static void cgt(struct timespec *pTs)
     }
 }
 
-static void testClientBody(int sock, int nRep)
+static void testClientBody(int sock, int nRep, int nPrevRep, int sleepDurUsec)
 {
     int i;
     struct timespec t0, t1;
-    double elapsedTime;
+    double elapsedTime = 0;
 
-    cgt(&t0);
+    char buf[200], outBuf[200];
+    memset(buf, 'A', sizeof buf);
+    memset(outBuf, 'A', sizeof buf);
 
-    for (i = 0; i < nRep; ++i) {
-        int ri;
-        if (sizeof i != send(sock, &i, sizeof i, 0)) abort();
-        if (sizeof ri != recv(sock, &ri, sizeof ri, 0)) abort();
-        if (i != ri) abort();
+    for (i = 0; i < nPrevRep; ++i) {
+        if (sizeof buf != send(sock, buf, sizeof buf, 0)) abort();
+        while (0 >= recv(sock, outBuf, sizeof buf, MSG_DONTWAIT)) {
+            if (EAGAIN != errno)
+                abort();
+        }
+        if (0 != memcmp(buf, outBuf, sizeof buf)) abort();
+        usleep(sleepDurUsec);
     }
 
-    cgt(&t1);
-    elapsedTime = diffTimespec(&t0, &t1) * 1e-9;
+    for (i = 0; i < nRep; ++i) {
+        cgt(&t0);
+        if (sizeof buf != send(sock, buf, sizeof buf, 0)) abort();
+        while (0 >= recv(sock, outBuf, sizeof buf, MSG_DONTWAIT)) {
+            if (EAGAIN != errno)
+                abort();
+        }
+        cgt(&t1);
+        elapsedTime += diffTimespec(&t0, &t1) * 1e-9;
+        if (0 != memcmp(buf, outBuf, sizeof buf)) abort();
+        usleep(sleepDurUsec);
+    }
+
     printf("Done.\nClosing the connection...  ");
     if (-1 == close(sock)) {
         perror("close(2)");
         exit(23);
     }
-    printf("Closed.\nElapsed time: %4.2f sec (RTT %4.2f usec == 2 * %4.2f usec).\n",
+    printf("Closed.\nElapsed time: %4.2e sec (RTT %4.2f usec == 2 * %4.2f usec).\n",
         elapsedTime, 1e6 * elapsedTime / nRep, 1e6 * elapsedTime / nRep / 2);
     printf("Quitting...\n");
 }
 
-static void testSocketInetClient(int nRep, int socktype)
+static void testSocketInetClient(int nRep, int nPrevRep, int socktype, int sleepDurUsec)
 {
     int sock, rc;
     struct addrinfo hints = { 0 }, *res;
@@ -225,15 +267,15 @@ static void testSocketInetClient(int nRep, int socktype)
     }
     freeaddrinfo(res);
     puts("Connected.\nNow benchmarking...  ");
-    testClientBody(sock, nRep);
+    testClientBody(sock, nRep, nPrevRep, sleepDurUsec);
 }
 
-const char g_unixServerSockPath[] = "/tmp/ipcPingPong-UnixDomainServerSock";
-const char g_unixClientSockPath[] = "/tmp/ipcPingPong-UnixDomainClietnSock";
+const char g_unixServerSockPath[] = "\0ipcPingPong-UnixDomainServerSock";
+const char g_unixClientSockPath[] = "\0ipcPingPong-UnixDomainClietnSock";
 
 static void testSocketUnixDgramServer(int nRep)
 {
-    int i, serverSock;
+    int serverSock;
     struct sockaddr_un sun = { 0 };
 
     printf("Starting the UNIX domain DGRAM socket server...  ");
@@ -242,21 +284,15 @@ static void testSocketUnixDgramServer(int nRep)
         exit(30);
     }
     sun.sun_family = AF_UNIX;
-    strcpy(sun.sun_path, g_unixServerSockPath);
-    unlink(g_unixServerSockPath);
+    memcpy(sun.sun_path, g_unixServerSockPath, sizeof g_unixServerSockPath - 1);
+//  unlink(g_unixServerSockPath);
     if (-1 == bind(serverSock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("bind(2)");
         exit(31);
     }
     printf("Done.\nBenchmarking...  ");
 
-    for (i = 0; i < nRep; ++i) {
-        int ri;
-        struct sockaddr_storage ss = { 0 };
-        socklen_t len = sizeof ss, dlen = sizeof ri;
-        if (recvfrom(serverSock, &ri, dlen, 0, (struct sockaddr *)&ss, &len) < dlen) break;
-        if (sendto(serverSock, &ri, dlen, 0, (const struct sockaddr *)&ss, len) < dlen) break;
-    }
+    doDgramServerLoop(serverSock, nRep);
 
     printf("Done.\nQuitting...\n");
     if (-1 == close(serverSock)) {
@@ -267,7 +303,7 @@ static void testSocketUnixDgramServer(int nRep)
 
 static void testSocketUnixStreamServer(int nRep)
 {
-    int i, serverSock, connSock;
+    int serverSock, connSock;
     struct sockaddr_un sun = { 0 };
 
     printf("Starting the UNIX domain STREAM socket server...  ");
@@ -276,8 +312,8 @@ static void testSocketUnixStreamServer(int nRep)
         exit(30);
     }
     sun.sun_family = AF_UNIX;
-    strcpy(sun.sun_path, g_unixServerSockPath);
-    unlink(g_unixServerSockPath);
+    memcpy(sun.sun_path, g_unixServerSockPath, sizeof g_unixServerSockPath - 1);
+//  unlink(g_unixServerSockPath);
     if (-1 == bind(serverSock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("bind(2)");
         exit(31);
@@ -293,13 +329,7 @@ static void testSocketUnixStreamServer(int nRep)
     }
     printf("Connected.\nBenchmarking...  ");
 
-    for (i = 0; i < nRep; ++i) {
-        int ri;
-        if (0 >= recv(connSock, &ri, sizeof ri, 0)) break;
-        if (0 >= send(connSock, &ri, sizeof ri, 0)) break;
-    }
-    if (i != nRep)
-        fprintf(stderr, "i==%d vs %d==nRep", i, nRep);
+    doServerLoop(connSock, nRep);
 
     printf("Done.\nQuitting...\n");
     if (-1 == close(serverSock)) {
@@ -308,7 +338,7 @@ static void testSocketUnixStreamServer(int nRep)
     }
 }
 
-static void testSocketUnixClient(int nRep, int socktype)
+static void testSocketUnixClient(int nRep, int nPrevRep, int socktype, int sleepDurUsec)
 {
     int sock;
     struct sockaddr_un sun = { 0 };
@@ -319,31 +349,20 @@ static void testSocketUnixClient(int nRep, int socktype)
         exit(32);
     }
     sun.sun_family = AF_UNIX;
-    strcpy(sun.sun_path, g_unixClientSockPath);
-    unlink(g_unixClientSockPath);
+    memcpy(sun.sun_path, g_unixClientSockPath, sizeof g_unixClientSockPath - 1);
+//  unlink(g_unixClientSockPath);
     if (-1 == bind(sock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("connect(2)");
         exit(45);
     }
 
-    strcpy(sun.sun_path, g_unixServerSockPath);
+    memcpy(sun.sun_path, g_unixServerSockPath, sizeof g_unixServerSockPath - 1);
     if (-1 == connect(sock, (const struct sockaddr *)&sun, sizeof sun)) {
         perror("connect(2)");
         exit(33);
     }
     puts("Connected.\nNow benchmarking...  ");
-    testClientBody(sock, nRep);
-}
-
-void createIpcId(const char *pfx, char *outbuf)
-{
-    char timebuf[BUFLEN];
-    struct timespec now_ts;
-    clock_gettime(CLOCK_REALTIME, &now_ts);
-    struct tm now_tm;
-    localtime_r(&now_ts.tv_sec, &now_tm);
-    strftime(timebuf, sizeof timebuf, "%Y%m%d%H%M%S", &now_tm);
-    sprintf(outbuf, "%s%s%06ld", pfx, timebuf, now_ts.tv_nsec / 1000);
+    testClientBody(sock, nRep, nPrevRep, sleepDurUsec);
 }
 
 int main(int argc, char *argv[])
@@ -351,13 +370,14 @@ int main(int argc, char *argv[])
     enum EnumMode mode = EnumModeServer;
     enum EnumSocketType sockType = EnumSocketTypeStream;
     enum EnumIpcMethod ipcMethod = EnumIpcMethodSocketInet;
-    int nRep = 10000;
-    char ipcId[BUFLEN] = { 0 };
+    int nRep = 100, nPrevRep = 0, sleepDurUsec = 500 * 1000;
 
     char optchr;
-    while (-1 != (optchr = getopt(argc, argv, "n:sdiuCS"))) {
+    while (-1 != (optchr = getopt(argc, argv, "n:N:l:sdiuCS"))) {
         switch (optchr) {
             case 'n': nRep = myAtoi(optarg); break;
+            case 'N': nPrevRep = myAtoi(optarg); break;
+            case 'l': sleepDurUsec = myAtoi(optarg); break;
 
             case 's': sockType = EnumSocketTypeStream; break;
             case 'd': sockType = EnumSocketTypeDgram; break;
@@ -379,21 +399,21 @@ int main(int argc, char *argv[])
         case EnumIpcMethodSocketInet:
             if (EnumModeServer == mode) {
                 if (EnumSocketTypeDgram == sockType)
-                    testSocketInetDgramServer(nRep);
+                    testSocketInetDgramServer(nRep + nPrevRep);
                 else
-                    testSocketInetStreamServer(nRep);
+                    testSocketInetStreamServer(nRep + nPrevRep);
             } else
-                testSocketInetClient(nRep, (EnumSocketTypeDgram == sockType ? SOCK_DGRAM : SOCK_STREAM));
+                testSocketInetClient(nRep, nPrevRep, (EnumSocketTypeDgram == sockType ? SOCK_DGRAM : SOCK_STREAM), sleepDurUsec);
             break;
 
         case EnumIpcMethodSocketUnix:
             if (EnumModeServer == mode) {
                 if (EnumSocketTypeDgram == sockType)
-                    testSocketUnixDgramServer(nRep);
+                    testSocketUnixDgramServer(nRep + nPrevRep);
                 else
-                    testSocketUnixStreamServer(nRep);
+                    testSocketUnixStreamServer(nRep + nPrevRep);
             } else
-                testSocketUnixClient(nRep, (EnumSocketTypeDgram == sockType) ? SOCK_DGRAM : SOCK_STREAM);
+                testSocketUnixClient(nRep, nPrevRep, (EnumSocketTypeDgram == sockType ? SOCK_DGRAM : SOCK_STREAM), sleepDurUsec);
             break;
     }
 
