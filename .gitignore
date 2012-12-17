@@ -99,6 +99,7 @@ fallocate
 myThreadId
 sleep
 memmovePerf
+cvPingPong
 
 # tests on how C++11 works
 arraySort
