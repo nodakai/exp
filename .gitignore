@@ -30,6 +30,7 @@ udpSender
 subpcap
 settimeofday
 maxMalloc
+busyLoop
 
 # tests on how C/C++ works
 tmInit
