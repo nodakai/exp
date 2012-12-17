@@ -120,3 +120,4 @@ atoiPerf.S
 vecScanPerf
 vecScanPerf.S
 ofstreamPerf
+ctxSwBench
