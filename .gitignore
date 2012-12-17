@@ -93,6 +93,7 @@ fdFstream
 ncurses
 tcpRel
 fsync
+fallocate
 
 # tests on how C++11 works
 arraySort
