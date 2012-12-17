@@ -123,3 +123,4 @@ vecScanPerf.S
 ofstreamPerf
 ctxSwBench
 cpuLocalCounters
+clockBench
