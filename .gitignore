@@ -13,6 +13,9 @@ valgrindStrlen
 
 labltk_space
 
+CtrlC
+CtrlC.exe
+
 # utilities
 arrDump
 directRead
