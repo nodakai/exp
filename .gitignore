@@ -93,6 +93,7 @@ arraySort
 detachThread
 map2ptr
 enumClass
+threadSubst
 
 # x86 benchmark
 busTraffic
