@@ -108,3 +108,4 @@ atoiPerf
 atoiPerf.S
 vecScanPerf
 vecScanPerf.S
+ofstreamPerf
