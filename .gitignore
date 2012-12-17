@@ -28,6 +28,7 @@ tcpSender
 mcSender
 udpSender
 subpcap
+settimeofday
 
 # tests on how C/C++ works
 tmInit

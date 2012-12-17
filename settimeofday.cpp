@@ -3,7 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <set>
+#include <algorithm>
 #include <stdexcept>
 
 #include <cstdio> // perror
@@ -17,6 +17,8 @@ using namespace std;
 #include <sys/time.h> // {get,set}timeofday
 #include <sys/types.h> // socket
 #include <sys/socket.h> // socket
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h> // close
 #include <netdb.h> // getaddrinfo
 #include <errno.h>
@@ -25,6 +27,7 @@ enum { RC_OK = 0, RC_NG = -1 };
 enum EnumMode { EnumModeServer, EnumModeClient };
 const size_t BUFLEN = 2048;
 const long MEGA = 1000 * 1000;
+const int maxN = 100;
 
 static long myAtoi(const char *str)
 {
@@ -102,6 +105,13 @@ static ssize_t sendAll(int sock, const void *rawBuf, ssize_t len)
     return nSentTot;
 }
 
+static void mySleepUsec(long usec)
+{
+    ::timespec sleepDur = { usec / MEGA, 1000 * (usec % MEGA) }, rest;
+    while (RC_NG == ::nanosleep(&sleepDur, &rest) && EINTR == errno)
+        sleepDur = rest;
+}
+
 static void connHandler(int connSock)
 {
     if (RC_NG == connSock) {
@@ -119,24 +129,26 @@ static void connHandler(int connSock)
 
     int n;
     ssize_t rc = recvAll(connSock, &n, sizeof n);
-    if (sizeof n != rc || 0 > n || 10 < n) {
+    if (sizeof n != rc || 0 > n || maxN < n) {
         cerr << "recvAll@" << __LINE__ << " failed (" << rc << ")" << endl;
         throw runtime_error("recvAll");
     }
 
     for (int i = 0; i < n; ++i) {
-        int k;
-        rc = recvAll(connSock, &k, sizeof k);
-        if (sizeof n != rc) {
+        ::timeval tv;
+        const ssize_t recvRc = recvAll(connSock, &tv, sizeof tv);
+        const ssize_t sentRc = sendAll(connSock, &tv, sizeof tv);
+        if (sizeof tv != recvRc) {
             cerr << "recvAll@" << __LINE__ << " failed (" << rc << ")" << endl;
             throw runtime_error("recvAll");
         }
-        rc = sendAll(connSock, &k, sizeof k);
-        if (sizeof n != rc) {
+        if (sizeof tv != sentRc) {
             cerr << "sendAll@" << __LINE__ << " failed (" << rc << ")" << endl;
             throw runtime_error("sendAll");
         }
     }
+
+    mySleepUsec(10 * 1000);
 
     ::timeval tv;
     ::gettimeofday(&tv, NULL);
@@ -171,6 +183,9 @@ static void doServer()
     if (RC_NG == ::setsockopt(svrSock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt))
         myPerror("setsockopt(2) with SO_REUSEADDR");
 
+    if (RC_NG == ::setsockopt(svrSock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof opt))
+        myPerror("setsockopt(2) with TCP_NODELAY");
+
     const ::timeval accTimeout = { 0, 876543 };
     if (RC_NG == ::setsockopt(svrSock, SOL_SOCKET, SO_RCVTIMEO, &accTimeout, sizeof accTimeout))
         myPerror("setsockopt(2) with SO_RCVTIMEO");
@@ -196,18 +211,11 @@ static string tvToString(const ::timeval &tv)
     buf[sizeof buf - 1] = '\0';
 
     ostringstream oss;
-    oss << buf << "." << setfill('0') << setw(6) << tv.tv_usec ;
+    oss << buf << '.' << setfill('0') << setw(6) << tv.tv_usec ;
     return oss.str();
 }
 
-static void mySleepUsec(long usec)
-{
-    ::timespec sleepDur = { usec / MEGA, 1000 * (usec % MEGA) }, rest;
-    while (RC_NG == ::nanosleep(&sleepDur, &rest) && EINTR == errno)
-        sleepDur = rest;
-}
-
-static void doClient(int n, const string &addr)
+static void doClient(int n, const string &addr, bool doit)
 {
     ::addrinfo *res;
     {
@@ -222,82 +230,82 @@ static void doClient(int n, const string &addr)
             ::exit(20);
         }
     }
+    struct ScopeExitGai {
+        ::addrinfo *m_res;
+        ScopeExitGai(::addrinfo *res) : m_res(res) { }
+        ~ScopeExitGai() { ::freeaddrinfo(m_res); }
+    } seGai(res);
 
     const int sock = ::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (RC_NG == sock)
         myPerror("socket(2)");
+    struct ScopeExitSock {
+        int m_sock;
+        ScopeExitSock(int sock) : m_sock(sock) { }
+        ~ScopeExitSock() { ::close(m_sock); }
+    } seSock(sock);
+
+    const int opt = 1;
+    if (RC_NG == ::setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof opt))
+        myPerror("setsockopt(2) with TCP_NODELAY");
 
     if (RC_NG == ::connect(sock, res->ai_addr, res->ai_addrlen))
         myPerror("connect(2)");
-
-    ::freeaddrinfo(res);
-
-    struct ScopeExit {
-        int m_sock;
-        ScopeExit(int sock) : m_sock(sock) { }
-        ~ScopeExit() { ::close(m_sock); }
-    } so(sock);
 
     ssize_t rc = sendAll(sock, &n, sizeof n);
     if (RC_NG == rc) {
         cerr << "sendAll@" << __LINE__ << " failed (" << rc << ")" << endl;
         throw runtime_error("sendAll");
     }
-    vector< ::timeval> tvs0(n), tvs1(n);
+
+    vector<long> latenciesUsec;
+    latenciesUsec.reserve(n);
 
     for (int i = 0; i < n; ++i) {
+        ::timeval sentTv = { i, i }, recvTv, tv0, tv1;
         mySleepUsec(10 * 1000);
 
-        ::gettimeofday(&tvs0[i], NULL);
-        rc = sendAll(sock, &i, sizeof i);
-        if (sizeof i != rc) {
-            cerr << "sendAll@" << __LINE__ << " failed (" << rc << ")" << endl;
+        ::gettimeofday(&tv0, NULL);
+        const ssize_t sendRc = sendAll(sock, &sentTv, sizeof sentTv);
+        const ssize_t recvRc = recvAll(sock, &recvTv, sizeof recvTv);
+        ::gettimeofday(&tv1, NULL);
+
+        if (sizeof sentTv != sendRc) {
+            cerr << "sendAll@" << __LINE__ << " failed (" << sendRc << ")" << endl;
             throw runtime_error("sendAll");
         }
-        int getI;
-        rc = recvAll(sock, &getI, sizeof getI);
-        if (sizeof getI != rc) {
-            cerr << "recvAll@" << __LINE__ << " failed (" << rc << ")" << endl;
+        if (sizeof recvTv != recvRc) {
+            cerr << "recvAll@" << __LINE__ << " failed (" << recvRc << ")" << endl;
             throw runtime_error("recvAll");
         }
-        ::gettimeofday(&tvs1[i], NULL);
-        if (i != getI) {
-            cerr << "i == " << i << " != " << getI << " == getI" << endl;
-            throw runtime_error("i != getI");
+        if ( ! (recvTv.tv_sec == i && recvTv.tv_usec == i)) {
+            cerr << "i == " << i << " != {" << recvTv.tv_sec << ',' << recvTv.tv_usec << "} == recvTv" << endl;
+            throw runtime_error("i != recvTv");
         }
+
+        latenciesUsec.push_back(diffTvInUs(tv1, tv0) / 2);
     }
 
-    ::timeval theirTime, myTime0, myTime1;
+    std::sort(latenciesUsec.begin(), latenciesUsec.end());
+    const long latencyUsec = latenciesUsec[latenciesUsec.size() / 2];
+
+    ::timeval theirTime;
     rc = recvAll(sock, &theirTime, sizeof theirTime);
+
     if (sizeof theirTime != rc) {
         cerr << "recvAll@" << __LINE__ << " failed (" << rc << ")" << endl;
         throw runtime_error("recvAll");
     }
-    ::gettimeofday(&myTime0, NULL);
 
-    set<long> latencies;
-    for (int i = 0; i < n; ++i) {
-        const long lat = diffTvInUs(tvs1[i], tvs0[i]);
-        latencies.insert(lat);
-    }
+    addToTv(theirTime, latencyUsec);
 
-    set<long>::const_iterator it(latencies.begin());
-    advance(it, n / 2);
-
-    long latencyUs = *it / 2;
-    cout << "The mean latency was " << latencyUs << " us." << endl;
-
-    addToTv(theirTime, latencyUs);
-
-    ::gettimeofday(&myTime1, NULL);
-
-    addToTv(theirTime, diffTvInUs(myTime1, myTime0));
-
-    if (RC_NG == ::settimeofday(&theirTime, NULL)) {
+    if (doit && RC_NG == ::settimeofday(&theirTime, NULL))
         myPerror("settimeofday(2)");
-    }
 
-    cout << "Now [" << tvToString(theirTime) << "]" << endl;
+    cout << "The min/mean/max latencies were " << (1e-3 * latenciesUsec.front()) << "/" <<
+        (1e-3 * latencyUsec) << "/" << (1e-3 * latenciesUsec.back()) << " ms." << endl;
+    cout << "Now [" << tvToString(theirTime) << "]  (doit==" << (doit ? "YES" : " no") <<
+        ")" << endl;
 }
 
 int main(int argc, char *argv[])
@@ -305,13 +313,16 @@ int main(int argc, char *argv[])
     int n = 3;
     EnumMode mode = EnumModeClient;
     string addr;
+    bool doit = false;
 
     char optchr;
-    while (RC_NG != (optchr = ::getopt(argc, argv, "n:CS"))) {
+    while (RC_NG != (optchr = ::getopt(argc, argv, "n:CSd"))) {
         switch (optchr) {
             case 'n': n = myAtoi(::optarg); break;
 
             case 'C': mode = EnumModeClient; break;
+            case 'd': doit = true; break;
+
             case 'S': mode = EnumModeServer; break;
 
             default: ::exit(10);
@@ -329,9 +340,9 @@ int main(int argc, char *argv[])
         if (addr.empty())
             throw invalid_argument("Please specify addr and port in the cmd line");
 
-        if (0 > n || 10 < n)
-            throw invalid_argument("-n too large");
+        if (0 > n || maxN < n)
+            throw invalid_argument("-n out of large");
 
-        doClient(n, addr);
+        doClient(n, addr, doit);
     }
 }
