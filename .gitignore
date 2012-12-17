@@ -86,6 +86,7 @@ ampm
 maxOpenedFiles
 fdFstream
 ncurses
+tcpRel
 
 # tests on how C++11 works
 arraySort
