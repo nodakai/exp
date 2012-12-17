@@ -98,6 +98,7 @@ fsync
 fallocate
 myThreadId
 sleep
+memmovePerf
 
 # tests on how C++11 works
 arraySort
