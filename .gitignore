@@ -76,6 +76,7 @@ sigOpsTwice
 isMulticast
 getoptMulti
 ampm
+maxOpenedFiles
 
 # tests on how C++11 works
 arraySort
