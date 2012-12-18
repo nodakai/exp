@@ -1,6 +1,7 @@
 #define _GNU_SOURCE 1
 
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <string>
 #include <mutex>
@@ -15,15 +16,15 @@ using std::string;
 
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <cerrno>
+#include <csignal>
 
-#include <time.h>
-#include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/fcntl.h>
 #include <sys/syscall.h>
-#include <signal.h>
 #include <getopt.h>
 
 enum { RC_OK = 0, RC_NG = -1 };
@@ -141,6 +142,7 @@ public:
             ;
         if ( ! g_running)
             return;
+
         __builtin_ia32_lfence();
         m_msgLen = in.size();
         ::memcpy(&m_buf[0], &in[0], in.size());
@@ -155,6 +157,7 @@ public:
             ;
         if ( ! g_running)
             return;
+
         __builtin_ia32_lfence();
         const size_t msgLen = m_msgLen;
         if (';' != m_buf[msgLen]) {
@@ -174,6 +177,8 @@ private:
     std::mutex m_mtx;
     std::condition_variable m_cv;
     typedef std::unique_lock<std::mutex> Lock;
+
+    static const std::chrono::milliseconds tmo;
 
 private:
     SimpChanBlocking() = delete;
@@ -202,6 +207,11 @@ public:
         Lock lk(m_mtx);
         if ( ! g_running)
             return;
+
+        while (EMPTY != m_check && std::cv_status::timeout == m_cv.wait_for(lk, tmo))
+            if ( ! g_running)
+                return;
+
         m_msgLen = in.size();
         ::memcpy(&m_buf[0], &in[0], in.size());
         m_buf[in.size()] = ';';
@@ -211,14 +221,14 @@ public:
     }
 
     void recv(std::string &out) {
-        const std::chrono::milliseconds tmo(IDLE_MSEC);
-
         Lock lk(m_mtx);
         if ( ! g_running)
             return;
+
         while (OCCUPIED != m_check && std::cv_status::timeout == m_cv.wait_for(lk, tmo))
             if ( ! g_running)
                 return;
+
         if (';' != m_buf[m_msgLen]) {
             cout << "[" ;
             cout.write(m_buf, m_msgLen);
@@ -230,7 +240,9 @@ public:
     }
 };
 
-class ShrMemBase {
+const std::chrono::milliseconds SimpChanBlocking::tmo(IDLE_MSEC);
+
+class DuplChanBase {
 protected:
 
     static const size_t MMAP_LEN = 1024*1024;
@@ -243,8 +255,8 @@ protected:
     SharedMemFmt * m_p;
 
 protected:
-    ShrMemBase() : m_p(NULL) { }
-    ~ShrMemBase() { close(); }
+    DuplChanBase() : m_p(NULL) { }
+    ~DuplChanBase() { close(); }
 
     void close() {
         if (m_p) {
@@ -274,7 +286,7 @@ public:
     }
 };
 
-class ShrMemFastSend : public ShrMemBase {
+class DuplChanFastSend : public DuplChanBase {
 public:
     inline void send(const std::string &buf) { m_p->fastCh.send(buf); }
     inline void recv(std::string &buf) { m_p->ch.recv(buf); }
@@ -282,7 +294,7 @@ public:
     bool held() const { return m_p->fastCh.held(); }
 
     void open(const string &id) {
-        ShrMemBase::open(id);
+        DuplChanBase::open(id);
         if (m_p->fastCh.held())
             abort();
         else
@@ -290,7 +302,7 @@ public:
     }
 };
 
-class ShrMemFastRecv : public ShrMemBase {
+class DuplChanFastRecv : public DuplChanBase {
 public:
     inline void send(const std::string &buf) { m_p->ch.send(buf); }
     inline void recv(std::string &buf) { m_p->fastCh.recv(buf); }
@@ -298,7 +310,7 @@ public:
     bool held() const { return m_p->ch.held(); }
 
     void open(const string &id) {
-        ShrMemBase::open(id);
+        DuplChanBase::open(id);
         if (m_p->ch.held())
             abort();
         else
@@ -308,24 +320,31 @@ public:
 
 static const string id("shmIpcBench");
 
-static void serverSenderKernel(ShrMemFastRecv *shm)
+static void serverSenderKernel(DuplChanFastRecv *shm)
 {
     char buf[BUFLEN];
     ::timeval tv;
+    std::ostringstream oss;
+
     for (;;) {
         myMicroSleep(1000 * PING_MSEC);
         if ( ! g_running)
             break;
         ::gettimeofday(&tv, NULL);
-        shm->send(string("[") + __func__ + ": " + tvFormat(tv, buf) + "]");
+
+        oss.str("");
+        oss << "[" << __func__ << ": " << tvFormat(tv, buf) << "]" ;
+        const auto &msg = oss.str();
+        shm->send(msg);
         if ( ! g_running)
             break;
+        cout << msg << endl;
     }
 
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-static void serverReceiverKernel(ShrMemFastRecv *shm)
+static void serverReceiverKernel(DuplChanFastRecv *shm)
 {
     string buf;
     ::timeval tv;
@@ -344,7 +363,7 @@ static void serverReceiverKernel(ShrMemFastRecv *shm)
 
 static void doServer()
 {
-    ShrMemFastRecv shm;
+    DuplChanFastRecv shm;
     shm.open(id);
 
     std::thread senderThread(serverSenderKernel, &shm);
@@ -359,24 +378,31 @@ static void doServer()
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-static void clientSenderKernel(ShrMemFastSend *shm)
+static void clientSenderKernel(DuplChanFastSend *shm)
 {
     char buf[BUFLEN];
     ::timeval tv;
+    std::ostringstream oss;
+
     for (;;) {
         myMicroSleep(1000 * PING_MSEC);
         if ( ! g_running)
             break;
         ::gettimeofday(&tv, NULL);
-        shm->send(string("[") + __func__ + ": " + tvFormat(tv, buf) + "]");
+
+        oss.str("");
+        oss << "[" << __func__ << ": " << tvFormat(tv, buf) << "]" ;
+        const auto &msg = oss.str();
+        shm->send(msg);
         if ( ! g_running)
             break;
+        cout << msg << endl;
     }
 
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-static void clientReceiverKernel(ShrMemFastSend *shm)
+static void clientReceiverKernel(DuplChanFastSend *shm)
 {
     string buf;
     ::timeval tv;
@@ -396,7 +422,7 @@ static void clientReceiverKernel(ShrMemFastSend *shm)
 
 static void doClient()
 {
-    ShrMemFastSend shm;
+    DuplChanFastSend shm;
     shm.open(id);
 
     std::thread senderThread(clientSenderKernel, &shm);
