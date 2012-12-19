@@ -25,13 +25,18 @@ using std::string;
 #include <sys/mman.h>
 #include <sys/fcntl.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <getopt.h>
 
-enum { RC_OK = 0, RC_NG = -1 };
+enum { RC_OK = 0, RC_NG = -1, RC_SHUT = -2 };
+const int INVALID_SOCK = -1;
 static const size_t BUFLEN = 2048;
 
 static std::atomic_int g_running = ATOMIC_VAR_INIT(1);
-static void sigIntHandler(int) {
+static void sigIntHandler(int)
+{
     g_running = 0;
     const char msg[] = "Caught SIGINT;  Set g_running = false;\n";
     auto ign = ::write(STDOUT_FILENO, msg, sizeof msg - 1);
@@ -53,9 +58,9 @@ static uint64_t myTime()
     return (static_cast<uint64_t>(tv.tv_sec) << 32) | static_cast<uint64_t>(tv.tv_usec);
 }
 
-static void myMicroSleep(uint64_t usec)
+static void myMicroSleep(long usec)
 {
-    const uint64_t mega = 1024 * 1024;
+    const int mega = 1024 * 1024;
     ::timespec sleepDur = { usec / mega, 1000 * (usec % mega) }, rest;
     while (::nanosleep(&sleepDur, &rest) && EINTR == errno)
         sleepDur = rest;
@@ -122,7 +127,7 @@ public:
                 return true;
             }
         }
-        cout << __func__ << "(): HeartBeat was obsolete;  Will use this shm..." << endl;
+        cout << __func__ << "(): HeartBeat was too old;  Will use this shm..." << endl;
         init();
         return false;
     }
@@ -137,28 +142,35 @@ public:
         SimpChanBase::init();
     }
 
-    void send(const std::string &in) {
-        while (g_running && EMPTY != m_check)
-            ;
-        if ( ! g_running)
-            return;
+    void send(const std::string &in, int &rcOut) {
+        while (EMPTY != m_check.load(std::memory_order_acquire)) {
+            if ( ! g_running) {
+                rcOut = RC_SHUT;
+                return;
+            }
+            myMicroSleep(1);
+        }
 
-        __builtin_ia32_lfence();
+        // std::atomic_thread_fence(std::memory_order_acquire);
+        // __builtin_ia32_lfence();
         m_msgLen = in.size();
         ::memcpy(&m_buf[0], &in[0], in.size());
         m_buf[in.size()] = ';';
-        __builtin_ia32_sfence();
-        m_check = OCCUPIED;
         m_time = myTime();
+        // __builtin_ia32_sfence();
+        m_check.store(OCCUPIED, std::memory_order_release);
+        rcOut = RC_OK;
     }
 
-    void recv(std::string &out) {
-        while (g_running && OCCUPIED != m_check)
-            ;
-        if ( ! g_running)
-            return;
+    void recv(std::string &out, int &rcOut) {
+        while (OCCUPIED != m_check.load(std::memory_order_acquire)) {
+            if ( ! g_running) {
+                rcOut = RC_SHUT;
+                return;
+            }
+        }
 
-        __builtin_ia32_lfence();
+        // __builtin_ia32_lfence();
         const size_t msgLen = m_msgLen;
         if (';' != m_buf[msgLen]) {
             cout << "[" ;
@@ -167,8 +179,9 @@ public:
             ::abort();
         }
         out.assign(&m_buf[0], msgLen);
-        __builtin_ia32_mfence();
-        m_check = EMPTY;
+//      __builtin_ia32_mfence();
+        m_check.store(EMPTY, std::memory_order_release);
+        rcOut = RC_OK;
     }
 };
 
@@ -203,14 +216,20 @@ public:
         ::pthread_condattr_destroy(&ca);
     }
 
-    void send(const std::string &in) {
+    void send(const std::string &in, int &rcOut) {
         Lock lk(m_mtx);
-        if ( ! g_running)
+        if ( ! g_running) {
+            rcOut = RC_SHUT;
             return;
+        }
 
-        while (EMPTY != m_check && std::cv_status::timeout == m_cv.wait_for(lk, tmo))
-            if ( ! g_running)
+        while (EMPTY != m_check) {
+            m_cv.wait_for(lk, tmo);
+            if ( ! g_running) {
+                rcOut = RC_SHUT;
                 return;
+            }
+        }
 
         m_msgLen = in.size();
         ::memcpy(&m_buf[0], &in[0], in.size());
@@ -218,16 +237,23 @@ public:
         m_check = OCCUPIED;
         m_time = myTime();
         m_cv.notify_one();
+        rcOut = RC_NG;
     }
 
-    void recv(std::string &out) {
+    void recv(std::string &out, int &rcOut) {
         Lock lk(m_mtx);
-        if ( ! g_running)
+        if ( ! g_running) {
+            rcOut = RC_SHUT;
             return;
+        }
 
-        while (OCCUPIED != m_check && std::cv_status::timeout == m_cv.wait_for(lk, tmo))
-            if ( ! g_running)
+        while (OCCUPIED != m_check) {
+            m_cv.wait_for(lk, tmo);
+            if ( ! g_running) {
+                rcOut = RC_SHUT;
                 return;
+            }
+        }
 
         if (';' != m_buf[m_msgLen]) {
             cout << "[" ;
@@ -237,6 +263,7 @@ public:
         }
         out.assign(&m_buf[0], m_msgLen);
         m_check = EMPTY;
+        rcOut = RC_OK;
     }
 };
 
@@ -288,8 +315,8 @@ public:
 
 class DuplChanFastSend : public DuplChanBase {
 public:
-    inline void send(const std::string &buf) { m_p->fastCh.send(buf); }
-    inline void recv(std::string &buf) { m_p->ch.recv(buf); }
+    inline void send(const std::string &buf, int &rcOut) { m_p->fastCh.send(buf, rcOut); }
+    inline void recv(std::string &buf, int &rcOut) { m_p->ch.recv(buf, rcOut); }
 
     bool held() const { return m_p->fastCh.held(); }
 
@@ -304,8 +331,8 @@ public:
 
 class DuplChanFastRecv : public DuplChanBase {
 public:
-    inline void send(const std::string &buf) { m_p->ch.send(buf); }
-    inline void recv(std::string &buf) { m_p->fastCh.recv(buf); }
+    inline void send(const std::string &buf, int &rcOut) { m_p->ch.send(buf, rcOut); }
+    inline void recv(std::string &buf, int &rcOut) { m_p->fastCh.recv(buf, rcOut); }
 
     bool held() const { return m_p->ch.held(); }
 
@@ -318,58 +345,26 @@ public:
     }
 };
 
+//----------------------------------------------------------------------------//
+
 static const string id("shmIpcBench");
 
-static void serverSenderKernel(DuplChanFastRecv *shm)
+static void serverSenderKernel(DuplChanFastRecv *chan)
 {
-    char buf[BUFLEN];
-    ::timeval tv;
-    std::ostringstream oss;
-
-    for (;;) {
-        myMicroSleep(1000 * PING_MSEC);
-        if ( ! g_running)
-            break;
-        ::gettimeofday(&tv, NULL);
-
-        oss.str("");
-        oss << "[" << __func__ << ": " << tvFormat(tv, buf) << "]" ;
-        const auto &msg = oss.str();
-        shm->send(msg);
-        if ( ! g_running)
-            break;
-        cout << msg << endl;
-    }
-
-    cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-static void serverReceiverKernel(DuplChanFastRecv *shm)
+static void serverReceiverKernel(DuplChanFastRecv *chan)
 {
-    string buf;
-    ::timeval tv;
-    char timeBuf[BUFLEN];
-
-    for (;;) {
-        shm->recv(buf);
-        if ( ! g_running)
-            break;
-        ::gettimeofday(&tv, NULL);
-        cout << __func__ << ": " << tvFormat(tv, timeBuf) << ": [" << buf << "]" << endl;
-    }
-
-    cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
 static void doServer()
 {
-    DuplChanFastRecv shm;
-    shm.open(id);
+    DuplChanFastRecv chan{};
+    chan.open(id);
 
-    std::thread senderThread(serverSenderKernel, &shm);
-    std::thread receiverThread(serverReceiverKernel, &shm);
+    std::thread senderThread(serverSenderKernel, &chan);
+    std::thread receiverThread(serverReceiverKernel, &chan);
 
-    getchar();
     if (senderThread.joinable())
         senderThread.join();
     if (receiverThread.joinable())
@@ -378,11 +373,27 @@ static void doServer()
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-static void clientSenderKernel(DuplChanFastSend *shm)
+static void doClient()
+{
+    DuplChanFastSend chan{};
+    chan.open(id);
+
+    const int svrSock = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (INVALID_SOCK == svrSock)
+        myPerror("socket(2)", 40);
+    ::sockaddr_in sin{};
+
+    cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
+}
+
+//----------------------------------------------------------------------------//
+
+static void simpleServerSenderKernel(DuplChanFastRecv *chan)
 {
     char buf[BUFLEN];
     ::timeval tv;
     std::ostringstream oss;
+    int rc;
 
     for (;;) {
         myMicroSleep(1000 * PING_MSEC);
@@ -393,8 +404,8 @@ static void clientSenderKernel(DuplChanFastSend *shm)
         oss.str("");
         oss << "[" << __func__ << ": " << tvFormat(tv, buf) << "]" ;
         const auto &msg = oss.str();
-        shm->send(msg);
-        if ( ! g_running)
+        chan->send(msg, rc /* out */ );
+        if (RC_OK != rc)
             break;
         cout << msg << endl;
     }
@@ -402,15 +413,16 @@ static void clientSenderKernel(DuplChanFastSend *shm)
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-static void clientReceiverKernel(DuplChanFastSend *shm)
+static void simpleServerReceiverKernel(DuplChanFastRecv *chan)
 {
     string buf;
     ::timeval tv;
     char timeBuf[BUFLEN];
+    int rc;
 
     for (;;) {
-        shm->recv(buf);
-        if ( ! g_running)
+        chan->recv(buf, rc /* out */ );
+        if (RC_OK != rc)
             break;
         ::gettimeofday(&tv, NULL);
         cout << __func__ << ": " << tvFormat(tv, timeBuf) << ": [" << buf << "]" << endl;
@@ -419,16 +431,14 @@ static void clientReceiverKernel(DuplChanFastSend *shm)
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-
-static void doClient()
+static void doSimpleServer()
 {
-    DuplChanFastSend shm;
-    shm.open(id);
+    DuplChanFastRecv chan{};
+    chan.open(id);
 
-    std::thread senderThread(clientSenderKernel, &shm);
-    std::thread receiverThread(clientReceiverKernel, &shm);
+    std::thread senderThread(simpleServerSenderKernel, &chan);
+    std::thread receiverThread(simpleServerReceiverKernel, &chan);
 
-    getchar();
     if (senderThread.joinable())
         senderThread.join();
     if (receiverThread.joinable())
@@ -437,15 +447,71 @@ static void doClient()
     cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
 }
 
-enum EnumMode {
-    EnumModeServer,
-    EnumModeClient
-};
+static void simpleClientSenderKernel(DuplChanFastSend *chan)
+{
+    char buf[BUFLEN];
+    ::timeval tv;
+    std::ostringstream oss;
+    int rc;
+
+    for (;;) {
+        myMicroSleep(1000 * PING_MSEC);
+        if ( ! g_running)
+            break;
+        ::gettimeofday(&tv, NULL);
+
+        oss.str("");
+        oss << "[" << __func__ << ": " << tvFormat(tv, buf) << "]" ;
+        const auto &msg = oss.str();
+        chan->send(msg, rc /* out */ );
+        if (RC_OK != rc)
+            break;
+        cout << msg << endl;
+    }
+
+    cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
+}
+
+static void simpleClientReceiverKernel(DuplChanFastSend *chan)
+{
+    string buf;
+    ::timeval tv;
+    char timeBuf[BUFLEN];
+    int rc;
+
+    for (;;) {
+        chan->recv(buf, rc /* out */ );
+        if (RC_OK != rc)
+            break;
+        ::gettimeofday(&tv, NULL);
+        cout << __func__ << ": " << tvFormat(tv, timeBuf) << ": [" << buf << "]" << endl;
+    }
+
+    cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
+}
+
+static void doSimpleClient()
+{
+    DuplChanFastSend chan{};
+    chan.open(id);
+
+    std::thread senderThread(simpleClientSenderKernel, &chan);
+    std::thread receiverThread(simpleClientReceiverKernel, &chan);
+
+    if (senderThread.joinable())
+        senderThread.join();
+    if (receiverThread.joinable())
+        receiverThread.join();
+
+    cout << "Returning from " << __PRETTY_FUNCTION__ << endl;
+}
+
+//----------------------------------------------------------------------------//
 
 int main(int argc, char *argv[])
 {
     {
-        struct ::sigaction act = { };
+        struct ::sigaction act{};
         act.sa_handler = sigIntHandler;
         if (RC_NG == ::sigemptyset(&act.sa_mask))
             myPerror("sigemptyset(3)", 4);
@@ -453,11 +519,19 @@ int main(int argc, char *argv[])
             myPerror("sigaction(2)", 7);
     }
 
+    bool simple = false;
+
+    enum EnumMode {
+        EnumModeServer,
+        EnumModeClient
+    };
     enum EnumMode mode = EnumModeServer;
 
     char optchr;
-    while (-1 != (optchr = ::getopt(argc, argv, "CS"))) {
+    while (-1 != (optchr = ::getopt(argc, argv, "sCS"))) {
         switch (optchr) {
+            case 's': simple = true; break;
+
             case 'C': mode = EnumModeClient; break;
             case 'S': mode = EnumModeServer; break;
 
@@ -466,9 +540,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (EnumModeClient == mode) {
-        doClient();
+    if (simple) {
+        if (EnumModeClient == mode)
+            doSimpleClient();
+        else
+            doSimpleServer();
     } else {
-        doServer();
+        if (EnumModeClient == mode)
+            doClient();
+        else
+            doServer();
     }
 }
