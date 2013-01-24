@@ -31,6 +31,7 @@ subpcap
 settimeofday
 maxMalloc
 busyLoop
+catNoreuse
 
 # tests on how C/C++ works
 tmInit
