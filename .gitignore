@@ -73,6 +73,7 @@ thirtythree
 syscallWrapper
 syscallWrapper.S
 refInMap
+mapLastElem
 
 # API samples
 tbbAtomic
