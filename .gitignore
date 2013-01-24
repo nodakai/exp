@@ -101,6 +101,7 @@ sleep
 memmovePerf
 cvPingPong
 shmIpcBench
+robustFutex
 
 # tests on how C++11 works
 arraySort
