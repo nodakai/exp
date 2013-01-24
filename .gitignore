@@ -109,6 +109,8 @@ map2ptr
 enumClass
 threadSubst
 chrono
+memoryOrder
+memoryOrder.S
 
 # x86 benchmark
 busTraffic
