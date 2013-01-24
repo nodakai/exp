@@ -75,6 +75,7 @@ syscallWrapper
 syscallWrapper.S
 refInMap
 mapLastElem
+sizeofArrParam
 
 # API samples
 tbbAtomic
