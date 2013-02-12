@@ -76,6 +76,7 @@ syscallWrapper.S
 refInMap
 mapLastElem
 sizeofArrParam
+printNumInHex
 
 # API samples
 tbbAtomic
