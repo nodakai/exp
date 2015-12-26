@@ -2,6 +2,6 @@ name := "SimplestSwingSample"
 
 version := "1.0"
 
-// scalaVersion := "2.9.2"
+scalaVersion := "2.11.7"
 
-libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-swing" % _ }
+libraryDependencies += "org.scala-lang" % "scala-swing" % "2.11.0-M7"
