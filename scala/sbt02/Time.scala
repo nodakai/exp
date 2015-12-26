@@ -1,6 +1,6 @@
-import org.scala_tools.time.Imports._
+import com.github.nscala_time.time.Imports._
 import DateTime.now
 
-object Main extends Application {
+object Time extends App {
   println(now + 6.month)
 }
