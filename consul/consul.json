@@ -1,0 +1,16 @@
+{
+    "bootstrap_expect": 2,
+    "server": true,
+    "data_dir": "data/",
+    "ui": true,
+    "ui_dir": "web_ui/",
+    "client_addr": "0.0.0.0",
+    "ports": {
+        "dns": 18600,
+        "rpc": 18400,
+        "http": 18500,
+        "server": 18300,
+        "serf_lan": 18301,
+        "serf_wan": 18302
+    }
+}
