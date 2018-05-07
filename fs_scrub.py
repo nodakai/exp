@@ -1,17 +1,8 @@
 #! /usr/bin/env python
 
 import sys
-import os, glob
+import os
 import time
-
-def walk(path, top=True):
-    for p in glob.glob(os.path.join(path, "*")):
-        print(p)
-        if p not in (".", ".."): # os.path.basename(p)[0] != ".":
-            if os.path.isdir(p):
-                walk(p)
-            else:
-                _ = file(p).read()
 
 def main(args):
     if not len(args):
@@ -25,7 +16,7 @@ def main(args):
                 acc.append(os.path.join(the_dir, f))
                 # print(f)
 
-    for i in xrange(5):
+    for i in range(5):
         sys.stdout.write("%-15d" % (i*100/5))
     sys.stdout.write("100%\n")
     tot = float(len(acc))
