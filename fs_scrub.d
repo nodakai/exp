@@ -9,11 +9,11 @@ immutable (string)[] enumerate(const(string)[] paths) {
     import std.algorithm.iteration : filter;
 
     immutable(string)[] ret;
-    foreach (a; paths) {
+    foreach (immutable a; paths) {
         // writefln("[%s]", a);
         try {
             auto files = dirEntries(a, SpanMode.depth).filter!(f => f.isFile);
-            foreach (f; files) {
+            foreach (immutable f; files) {
                 // writefln("[%s]", f);
                 ret ~= f;
             }
@@ -27,21 +27,20 @@ void main1(const(string)[] paths) {
     // from!"core.thread".Thread.sleep(from!"core.time".dur!("msecs")(567));
     import std.stdio : stdout, File;
 
-    foreach (i; 0..5)
-        stdout.writef("%-15d", 100 * i / 5);
-    stdout.write("100%\n");
+    foreach (immutable i; 0..5)
+        stdout.writef("%-15d", 100 * i / 5);  // 5 * 15 + 5 == 80
+    stdout.writeln("100 %");
 
     immutable allPaths = enumerate(paths),
-              tot = cast(double)(allPaths.length),
-              STEP = 1. / 80;
-    double thresh = STEP;
-    auto err_cnt = 0;
-    auto buf = new ubyte[1 << 20];
-    foreach(i, path; allPaths) {
-        while (thresh < i / tot) {
+              tot = double(allPaths.length),
+              WIDTH = 80.;
+    auto progress = 0,
+         err_cnt = 0,
+         buf = new ubyte[10 * 1024 * 1024];
+    foreach (immutable i, path; allPaths) {
+        for ( ; progress / WIDTH < (i + 1) / tot; ++progress) {
             stdout.write('-');
             stdout.flush();
-            thresh += STEP;
         }
 
         try {
@@ -55,24 +54,11 @@ void main1(const(string)[] paths) {
                 throw ex;
         }
     }
-    stdout.write("\n");
+    stdout.writeln();
     stdout.flush();
 }
 
 void main(string[] args) {
-    import std.stdio : writeln, writefln;
-
-    /+
-    import std.getopt : getopt;
-
-    string[] paths;
-    getopt(args, "paths|p", &paths);
-    if (!paths) {
-        writeln("yay");
-        paths ~= ".";
-    }
-    +/
-
-    const auto dt = from!"std.datetime.stopwatch".benchmark!({ main1(args[1..$]); })(1)[0];
-    writefln("Took %.1f sec.", 1e-3 * dt.total!"msecs");
+    immutable dt = from!"std.datetime.stopwatch".benchmark!({ main1(args[1..$]); })(1)[0];
+    from!"std.stdio".writefln("Took %.1f sec.", 1e-3 * dt.total!"msecs");
 }
