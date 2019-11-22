@@ -77,6 +77,7 @@ refInMap
 mapLastElem
 sizeofArrParam
 printNumInHex
+cpp11showcase
 
 # API samples
 tbbAtomic
