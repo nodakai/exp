@@ -137,3 +137,14 @@ ctxSwBench
 cpuLocalCounters
 clockBench
 strOpPerf
+
+# .Net Core
+bin/
+obj/
+.ionide/
+.paket
+paket-files/
+packages/
+
+# Rust (Cargo)
+target/
